@@ -1,5 +1,5 @@
 [package]
-name = "barter-integration-rs"
+name = "barter-integration"
 version = "0.1.0"
 edition = "2021"
 
@@ -26,3 +26,4 @@ serde_json = "1.0.68"
 
 # Misc
 chrono = {version = "0.4.19", features = ["serde"]}
+rust_decimal = "1.22.0"
