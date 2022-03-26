@@ -73,10 +73,51 @@ impl Symbol {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+    use futures::StreamExt;
+    use crate::public::MarketDataStream;
+    use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
+    use crate::public::model::{MarketData, Subscription};
     use super::*;
+
+    // Todo: Impl MarketEvent w/ sequence & timestamp
+    //
+
+    async fn run<S, OutputIter>(subscriptions: &[Subscription])
+    where
+        S: MarketDataStream<OutputIter>,
+        OutputIter: IntoIterator<Item = MarketData>,
+        <<OutputIter as IntoIterator>::IntoIter as Iterator>::Item: Debug,
+    {
+        let mut stream = S::init(subscriptions)
+            .await
+            .expect("failed to init stream");
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(market_data) => {
+                    market_data
+                        .into_iter()
+                        .for_each(|event| {
+                            println!("{:?}", event);
+                        })
+                }
+                Err(err) => {
+                    println!("{:?}", err);
+                    break;
+                }
+            }
+        }
+    }
 
     #[tokio::test]
     async fn it_works() {
+        let subscriptions = [
+            Subscription::Trades(Instrument::new(
+                "btc", "usdt", InstrumentKind::Future)
+            ),
+        ];
 
+        run::<BinanceFuturesStream, BinanceFuturesItem>(&subscriptions).await;
     }
 }

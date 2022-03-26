@@ -9,6 +9,7 @@ pub type BinanceStreamId = String;
 
 /// Binance Message variants that could be received over [`WebSocket`].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[serde(untagged, rename_all = "camelCase")]
 pub enum BinanceMessage {
     Subscribed(BinanceSubscribed),
     Trade(BinanceTrade)

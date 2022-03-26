@@ -12,6 +12,11 @@ use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use crate::socket::ExchangeSocket;
+use crate::socket::protocol::websocket::{WebSocket, WebSocketParser, WsMessage};
+
+pub type BinanceFuturesStream = ExchangeSocket<WebSocket, WsMessage, WebSocketParser, BinanceFutures, BinanceMessage, MarketData>;
+pub type BinanceFuturesItem = std::option::IntoIter<MarketData>;
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct BinanceFutures {

@@ -16,7 +16,7 @@ pub mod binance;
 
 /// Todo:
 #[async_trait]
-pub trait MarketEventStream<OutputIter>: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin
+pub trait MarketDataStream<OutputIter>: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin
 where
     OutputIter: IntoIterator<Item = MarketData>,
 {
@@ -36,7 +36,7 @@ where
 }
 
 #[async_trait]
-impl<ExTransformer, ExMessage, OutputIter> MarketEventStream<OutputIter>
+impl<ExTransformer, ExMessage, OutputIter> MarketDataStream<OutputIter>
     for ExchangeSocket<WebSocket, WsMessage, WebSocketParser, ExTransformer, ExMessage, MarketData>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
@@ -47,6 +47,7 @@ where
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {
         // Connect to exchange WebSocket server
         let mut websocket = connect(ExTransformer::BASE_URL).await?;
+
 
         // Construct Exchange capable of translating
         let mut exchange = ExTransformer::new();
