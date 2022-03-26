@@ -98,7 +98,6 @@ impl BinanceFutures {
         self.streams
             .get_mut(stream_id)
             .map(|stream_meta| {
-
                 let instrument = match &stream_meta.subscription {
                     Subscription::Trades(instrument) => instrument.clone()
                 };

@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Todo:
@@ -44,8 +44,14 @@ impl Display for InstrumentKind {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Symbol(pub String);
+
+impl Debug for Symbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl Display for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -86,8 +92,6 @@ mod tests {
     use crate::public::model::{MarketEvent, Subscription};
     use super::*;
 
-    // Todo: Impl MarketEvent w/ sequence & timestamp
-    //    '-> may need to impl in Exchange in case of multiple subscriptions (different sequences)
     // Todo: Find a way to remove SocketItem... it surely isn't needed.
     // Todo: Is it possible to pair the Socket & ProtocolParser generics eg/ 'SocketParser'
     // Todo: Maybe OutputIter will become an Option<OutputIter>?
@@ -125,6 +129,9 @@ mod tests {
         let subscriptions = [
             Subscription::Trades(Instrument::new(
                 "btc", "usdt", InstrumentKind::Future)
+            ),
+            Subscription::Trades(Instrument::new(
+                "eth", "usdt", InstrumentKind::Future)
             ),
         ];
 

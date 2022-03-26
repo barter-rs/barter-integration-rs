@@ -129,6 +129,14 @@ impl AsRef<str> for StreamId {
     }
 }
 
+impl Deref for StreamId {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl<'de> Deserialize<'de> for StreamId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
         String::deserialize(deserializer).map(StreamId)
