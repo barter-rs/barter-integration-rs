@@ -1,10 +1,11 @@
+use serde::{Deserialize, Serialize};
 use rust_decimal::Decimal;
 
 /// Todo:
 pub mod futures;
 
 /// Binance Message variants that could be received over [`WebSocket`].
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum BinanceMessage {
     Subscribed(BinanceSubscribed),
     Trade(BinanceTrade)
