@@ -58,17 +58,6 @@ where
                 .await?;
         }
 
-        Ok(Self {
-            socket: websocket,
-            parser: WebSocketParser,
-            transformer: exchange,
-            socket_item_marker: Default::default(),
-            exchange_message_marker: Default::default(),
-            output_marker: Default::default()
-        })
+        Ok(ExchangeSocket::new(websocket, WebSocketParser, exchange))
     }
 }
-
-
-
-

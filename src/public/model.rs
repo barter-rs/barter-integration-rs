@@ -26,7 +26,7 @@ pub struct Trade {
     pub received_timestamp: DateTime<Utc>,
     pub exchange_timestamp: DateTime<Utc>,
     pub price: Decimal,
-    pub amount: Decimal,
+    pub quantity: Decimal,
     pub direction: Direction,
 }
 
