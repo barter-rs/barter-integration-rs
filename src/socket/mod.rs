@@ -34,12 +34,12 @@ where
     ExchangeMessage: DeserializeOwned,
 {
     #[pin]
-    socket: Socket,
-    parser: StreamParser,
-    transformer: StreamTransformer,
-    socket_item_marker: PhantomData<SocketItem>,
-    exchange_message_marker: PhantomData<ExchangeMessage>,
-    output_marker: PhantomData<Output>,
+    pub socket: Socket,
+    pub parser: StreamParser,
+    pub transformer: StreamTransformer,
+    pub socket_item_marker: PhantomData<SocketItem>,
+    pub exchange_message_marker: PhantomData<ExchangeMessage>,
+    pub output_marker: PhantomData<Output>,
 }
 
 impl<Socket, SocketItem, StreamItem, StreamParser, StreamTransformer, ExchangeMessage, Output> Stream
