@@ -59,24 +59,21 @@ impl AsRef<str> for Symbol {
     }
 }
 
-impl<S> From<S> for Symbol
-where
-    S: Into<String>
-{
-    fn from(input: S) -> Self {
-        Self(input.into())
-    }
-}
-
 impl<'de> Deserialize<'de> for Symbol {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
         String::deserialize(deserializer).map(Symbol::new)
     }
 }
 
+impl<S> From<S> for Symbol where S: Into<String> {
+    fn from(input: S) -> Self {
+        Self(input.into().to_lowercase())
+    }
+}
+
 impl Symbol {
-    pub fn new<S>(symbol: S) -> Self where S: Into<String> {
-        Self(symbol.into().to_lowercase())
+    pub fn new<S>(input: S) -> Self where S: Into<Symbol> {
+        input.into()
     }
 }
 
