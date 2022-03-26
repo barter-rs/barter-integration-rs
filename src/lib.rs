@@ -1,8 +1,10 @@
 use std::fmt::{Display, Formatter};
 use serde::{Deserialize, Deserializer, Serialize};
 
+/// Todo:
 pub mod socket;
 pub mod public;
+pub mod util;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Instrument {
@@ -66,5 +68,15 @@ impl<'de> Deserialize<'de> for Symbol {
 impl Symbol {
     pub fn new<S>(symbol: S) -> Self where S: Into<String> {
         Self(symbol.into().to_lowercase())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn it_works() {
+
     }
 }

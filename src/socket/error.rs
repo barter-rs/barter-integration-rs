@@ -2,6 +2,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum SocketError {
+    #[error("error subscribing to resources over the socket: {0}")]
+    SubscribeError(&'static str),
+
+    #[error("received unidentifiable message over the socket: {0}")]
+    Unidentifiable(String),
+
     #[error("WebSocket error: {0}")]
     WebSocketError(#[from] tokio_tungstenite::tungstenite::Error),
 

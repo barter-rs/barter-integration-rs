@@ -24,7 +24,7 @@ where
 }
 
 /// Todo:
-pub trait Exchange<ExMessage>
+pub trait Exchange<ExMessage>: Sized
 where
     Self: Transformer<ExMessage, MarketData>,
     ExMessage: DeserializeOwned,
