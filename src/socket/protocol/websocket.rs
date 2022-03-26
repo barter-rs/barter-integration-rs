@@ -5,9 +5,14 @@ use crate::socket::{
     SocketError,
     protocol::ProtocolParser
 };
-use tokio_tungstenite::tungstenite::{Message as WsMessage, Error as WsError};
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tracing::{trace, warn};
+
+/// Communicative type alias for a tungstenite [`WebSocket`] `Message`.
+pub type WsMessage = tokio_tungstenite::tungstenite::Message;
+
+/// Communicative type alias for a tungstenite [`WebSocket`] `Error`.
+pub type WsError = tokio_tungstenite::tungstenite::Error;
 
 /// Convenient type alias for a tungstenite WebSocket.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
