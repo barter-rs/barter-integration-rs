@@ -16,12 +16,12 @@ pub struct Instrument {
 impl Instrument {
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
     where
-        S: Into<String>
+        S: Into<Symbol>
     {
         Self {
             kind,
-            base: Symbol::new(base),
-            quote: Symbol::new(quote),
+            base: base.into(),
+            quote: quote.into(),
         }
     }
 }
@@ -56,6 +56,15 @@ impl Display for Symbol {
 impl AsRef<str> for Symbol {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl<S> From<S> for Symbol
+where
+    S: Into<String>
+{
+    fn from(input: S) -> Self {
+        Self(input.into())
     }
 }
 
