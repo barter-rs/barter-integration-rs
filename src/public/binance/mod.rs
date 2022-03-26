@@ -1,11 +1,13 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use rust_decimal::Decimal;
+use crate::Instrument;
+use crate::public::model::{Direction, MarketData, StreamId, Trade};
+use crate::public::StreamIdentifier;
+use crate::util::epoch_ms_to_datetime_utc;
 
 /// Todo:
 pub mod futures;
-
-/// Type alias to communicate a `String` is a Binance stream identifier (eg/ btcusdt@aggTrade)
-pub type BinanceStreamId = String;
 
 /// Binance Message variants that could be received over [`WebSocket`].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -39,4 +41,29 @@ pub struct BinanceTrade {
     quantity: Decimal,
     #[serde(rename = "m")]
     buyer_is_maker: bool,
+}
+
+impl StreamIdentifier for BinanceTrade {
+    fn to_stream_id(&self) -> StreamId {
+        format!("{}@{}", self.symbol.to_lowercase(), self.event_type).into()
+    }
+}
+
+impl From<(&str, Instrument, BinanceTrade)> for MarketData {
+    fn from((exchange, instrument, trade): (&str, Instrument, BinanceTrade)) -> Self {
+        Self::Trade(Trade {
+            id: trade.id.to_string(),
+            exchange: exchange.to_string(),
+            instrument,
+            received_timestamp: Utc::now(),
+            exchange_timestamp: epoch_ms_to_datetime_utc(trade.trade_ts),
+            price: trade.price,
+            quantity: trade.quantity,
+            direction: if trade.buyer_is_maker { // Todo: Check this
+                Direction::Short
+            } else {
+                Direction::Long
+            }
+        })
+    }
 }

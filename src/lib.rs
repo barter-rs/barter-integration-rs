@@ -83,10 +83,11 @@ mod tests {
     use futures::StreamExt;
     use crate::public::MarketDataStream;
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
-    use crate::public::model::{MarketData, Subscription};
+    use crate::public::model::{MarketEvent, Subscription};
     use super::*;
 
     // Todo: Impl MarketEvent w/ sequence & timestamp
+    //    '-> may need to impl in Exchange in case of multiple subscriptions (different sequences)
     // Todo: Find a way to remove SocketItem... it surely isn't needed.
     // Todo: Is it possible to pair the Socket & ProtocolParser generics eg/ 'SocketParser'
     // Todo: Maybe OutputIter will become an Option<OutputIter>?
@@ -95,7 +96,7 @@ mod tests {
     async fn run<S, OutputIter>(subscriptions: &[Subscription])
     where
         S: MarketDataStream<OutputIter>,
-        OutputIter: IntoIterator<Item = MarketData>,
+        OutputIter: IntoIterator<Item = MarketEvent>,
         <<OutputIter as IntoIterator>::IntoIter as Iterator>::Item: Debug,
     {
         let mut stream = S::init(subscriptions)
