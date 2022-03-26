@@ -5,10 +5,10 @@ use crate::socket::{
 };
 use serde::de::DeserializeOwned;
 
-pub trait ProtocolParser<ExchangeMessage>
+pub trait ProtocolParser<Output>
 where
-    ExchangeMessage: DeserializeOwned,
+    Output: DeserializeOwned,
 {
     type Input;
-    fn parse(input: Self::Input) -> Result<Option<ExchangeMessage>, SocketError>;
+    fn parse(input: Self::Input) -> Result<Option<Output>, SocketError>;
 }
