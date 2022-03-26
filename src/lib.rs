@@ -81,7 +81,10 @@ mod tests {
     use super::*;
 
     // Todo: Impl MarketEvent w/ sequence & timestamp
-    //
+    // Todo: Find a way to remove SocketItem... it surely isn't needed.
+    // Todo: Is it possible to pair the Socket & ProtocolParser generics eg/ 'SocketParser'
+    // Todo: Maybe OutputIter will become an Option<OutputIter>?
+    // Todo: Impl From for Subscribed & BinanceTrade routes to cleanup transform method()
 
     async fn run<S, OutputIter>(subscriptions: &[Subscription])
     where
