@@ -1,13 +1,15 @@
 
 pub mod protocol;
+pub mod error;
 
-use crate::socket::protocol::ProtocolParser;
-use std::fmt::Debug;
+use crate::socket::{
+    error::SocketError,
+    protocol::ProtocolParser
+};
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use serde::de::DeserializeOwned;
-use thiserror::Error;
 use pin_project::pin_project;
 use futures::{Sink, Stream};
 
@@ -15,12 +17,12 @@ use futures::{Sink, Stream};
 //  eg/ enum BinanceMessage { Error, BinancePayload }
 // Todo: Can I optimise the use of generics? eg/ Socket::Item,
 
-pub trait Transformer<ExchangeMessage, Output>
+pub trait Transformer<Input, Output>
 where
-    ExchangeMessage: DeserializeOwned,
+    Input: DeserializeOwned,
 {
     type OutputIter: IntoIterator<Item = Output>;
-    fn transform(&mut self, input: ExchangeMessage) -> Result<Self::OutputIter, SocketError>;
+    fn transform(&mut self, input: Input) -> Result<Self::OutputIter, SocketError>;
 }
 
 #[pin_project]
@@ -124,16 +126,4 @@ where
             output_marker: PhantomData::default()
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum SocketError {
-    #[error("WebSocket error: {0}")]
-    WebSocketError(#[from] tokio_tungstenite::tungstenite::Error),
-
-    #[error("JSON SerDe error: {0}")]
-    SerdeJsonError(#[from] serde_json::Error),
-
-    #[error("Sink error")]
-    SinkError,
 }
