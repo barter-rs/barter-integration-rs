@@ -9,6 +9,7 @@ use tokio_tungstenite::tungstenite::{Message as WsMessage, Error as WsError};
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tracing::{trace, warn};
 
+/// Convenient type alias for a tungstenite WebSocket.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 pub struct WebSocketParser;
