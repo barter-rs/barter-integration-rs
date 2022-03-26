@@ -1,12 +1,19 @@
-use serde::de::DeserializeOwned;
-use tokio::net::TcpStream;
-use tokio_tungstenite::MaybeTlsStream;
 use crate::socket::{
     SocketError,
     protocol::ProtocolParser
 };
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tracing::{trace, warn};
+use tokio_tungstenite::{
+    connect_async, MaybeTlsStream,
+    tungstenite::{
+        client::IntoClientRequest,
+        protocol::CloseFrame
+    }
+};
+use std::fmt::Debug;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use tokio::net::TcpStream;
+use tracing::{debug, trace, warn};
 
 /// Communicative type alias for a tungstenite [`WebSocket`] `Message`.
 pub type WsMessage = tokio_tungstenite::tungstenite::Message;
@@ -17,6 +24,19 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 /// Convenient type alias for a tungstenite WebSocket.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
 
+/// Connect asynchronously to [`WebSocket`] server.
+pub async fn connect<R>(request: R) -> Result<WebSocket, SocketError>
+where
+    R: IntoClientRequest + Debug
+{
+    debug!(request = format!("{:?}", request), "attempting to establish WebSocket connection");
+    connect_async(request)
+        .await
+        .and_then(|(websocket, _)| Ok(websocket))
+        .map_err(SocketError::WebSocketError)
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct WebSocketParser;
 
 impl<ExchangeMessage> ProtocolParser<ExchangeMessage> for WebSocketParser
@@ -39,6 +59,7 @@ where
     }
 }
 
+/// Todo:
 pub fn process_payload<ExchangeMessage>(payload: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError>
 where
     ExchangeMessage: DeserializeOwned,
@@ -56,16 +77,19 @@ where
         })
 }
 
+/// Todo:
 pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError> {
     trace!(payload = &*format!("{:?}", ping), "received Ping WebSocket message");
     Ok(None)
 }
 
+/// Todo:
 pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError> {
     trace!(payload = &*format!("{:?}", pong), "received Pong WebSocket message");
     Ok(None)
 }
 
+/// Todo:
 pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame>) -> Result<Option<ExchangeMessage>, SocketError> {
     trace!(payload = &*format!("{:?}", close_frame), "received CloseFrame WebSocket message");
     Ok(None)
