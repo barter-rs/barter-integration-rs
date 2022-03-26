@@ -1,20 +1,14 @@
-use std::pin::Pin;
-use std::task::{Context, Poll};
 use crate::{
     socket::{
         ExchangeSocket, Transformer,
-        protocol::websocket::{WebSocket, WebSocketParser, WsMessage},
+        protocol::websocket::{connect, WebSocket, WebSocketParser, WsMessage},
         error::SocketError
     },
-    public::model::MarketData
+    public::model::{Subscription, MarketData}
 };
 use async_trait::async_trait;
-use futures::{Sink, SinkExt, Stream, StreamExt};
+use futures::{SinkExt, Stream};
 use serde::de::DeserializeOwned;
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use crate::public::model::Subscription;
-use crate::socket::protocol::websocket::connect;
 
 /// Todo:
 pub mod model;
@@ -26,7 +20,7 @@ pub trait MarketEventStream<OutputIter>: Stream<Item = Result<OutputIter, Socket
 where
     OutputIter: IntoIterator<Item = MarketData>,
 {
-    async fn init(subscriptions: &[String]) -> Result<Self, SocketError>;
+    async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError>;
 }
 
 /// Todo:
@@ -46,7 +40,7 @@ impl<ExTransformer, ExMessage, OutputIter> MarketEventStream<OutputIter>
     for ExchangeSocket<WebSocket, WsMessage, WebSocketParser, ExTransformer, ExMessage, MarketData>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
-    ExTransformer: Exchange<ExMessage>,
+    ExTransformer: Exchange<ExMessage> + Send,
     ExMessage: DeserializeOwned,
     OutputIter: IntoIterator<Item = MarketData>,
 {
@@ -56,7 +50,6 @@ where
 
         // Construct Exchange capable of translating
         let mut exchange = ExTransformer::new();
-
 
         // Action Subscriptions over the socket
         for sub_payload in exchange.generate_subscriptions(subscriptions) {

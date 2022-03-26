@@ -27,9 +27,9 @@ pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream
 /// Connect asynchronously to [`WebSocket`] server.
 pub async fn connect<R>(request: R) -> Result<WebSocket, SocketError>
 where
-    R: IntoClientRequest + Debug
+    R: IntoClientRequest + Unpin + Debug
 {
-    debug!(request = format!("{:?}", request), "attempting to establish WebSocket connection");
+    debug!(request = &*format!("{:?}", request), "attempting to establish WebSocket connection");
     connect_async(request)
         .await
         .and_then(|(websocket, _)| Ok(websocket))
