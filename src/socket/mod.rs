@@ -13,10 +13,6 @@ use serde::de::DeserializeOwned;
 use pin_project::pin_project;
 use futures::{Sink, Stream};
 
-// Todo: Add proper error enum for BinanceMessage in Barter-Data
-//  eg/ enum BinanceMessage { Error, BinancePayload }
-// Todo: Can I optimise the use of generics? eg/ Socket::Item,
-
 pub trait Transformer<Input, Output>
 where
     Input: DeserializeOwned,

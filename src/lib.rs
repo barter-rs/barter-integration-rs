@@ -93,9 +93,15 @@ mod tests {
     use super::*;
 
     // Todo: Find a way to remove SocketItem... it surely isn't needed.
+
     // Todo: Is it possible to pair the Socket & ProtocolParser generics eg/ 'SocketParser'
+
     // Todo: Maybe OutputIter will become an Option<OutputIter>?
-    // Todo: Impl From for Subscribed & BinanceTrade routes to cleanup transform method()
+
+    // Todo: Add proper error enum for BinanceMessage in Barter-Data
+    //     '--> eg/ enum BinanceMessage { Error, BinancePayload }
+
+    // Todo: Do I want to keep the name trait Exchange? Do I like the generic ExTransformer, etc.
 
     async fn run<S, OutputIter>(subscriptions: &[Subscription])
     where

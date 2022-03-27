@@ -51,11 +51,11 @@ where
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {
+        // Construct Exchange w/ functionality to translating between Barter & exchange structures
+        let mut exchange = ExTransformer::new();
+
         // Connect to exchange WebSocket server
         let mut websocket = connect(ExTransformer::BASE_URL).await?;
-
-        // Construct Exchange capable of translating
-        let mut exchange = ExTransformer::new();
 
         // Action Subscriptions over the socket
         for sub_payload in exchange.generate_subscriptions(subscriptions) {
