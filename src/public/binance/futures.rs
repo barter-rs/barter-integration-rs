@@ -6,7 +6,7 @@ use crate::{
     },
     public::{
         StreamIdentifier,
-        Exchange, Transformer,
+        ExchangeId, Transformer,
         model::{Subscription, StreamMeta, MarketEvent, Sequence, MarketData},
         binance::{StreamId, BinanceMessage},
     },
@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use crate::public::ExchangeTransformer;
+use crate::public::model::StreamKind;
 
 // Todo: Can I simplify these ie/ remove generics or derive some generics from others
 pub type BinanceFuturesStream = ExchangeWebSocket<BinanceFutures, BinanceMessage, MarketEvent>;
@@ -25,8 +27,8 @@ pub struct BinanceFutures {
     pub streams: HashMap<StreamId, StreamMeta>
 }
 
-impl Exchange for BinanceFutures {
-    const EXCHANGE: &'static str = "binance_futures";
+impl ExchangeTransformer for BinanceFutures {
+    const EXCHANGE: ExchangeId = ExchangeId::BinanceFutures;
     const BASE_URL: &'static str = "wss://fstream.binance.com/ws";
 
     fn new() -> Self {
@@ -66,7 +68,7 @@ impl Transformer<MarketEvent> for BinanceFutures {
         match input {
             BinanceMessage::Subscribed(sub_confirm) => {
                 if sub_confirm.result.is_some() {
-                    Err(SocketError::SubscribeError(""))
+                    Err(SocketError::SubscribeError("".to_string()))
                 } else {
                     Ok(None.into_iter())
                 }
@@ -86,10 +88,10 @@ impl Transformer<MarketEvent> for BinanceFutures {
 }
 
 impl BinanceFutures {
-    fn get_stream_id(subscription: &Subscription) -> StreamId {
-        match subscription {
-            Subscription::Trades(instrument) => {
-                StreamId(format!("{}{}@aggTrade", instrument.base, instrument.quote))
+    fn get_stream_id(sub: &Subscription) -> StreamId {
+        match sub.kind {
+            StreamKind::Trades => {
+                StreamId(format!("{}{}@aggTrade", sub.instrument.base, sub.instrument.quote))
             }
         }
     }
@@ -98,14 +100,11 @@ impl BinanceFutures {
         self.streams
             .get_mut(stream_id)
             .map(|stream_meta| {
-                let instrument = match &stream_meta.subscription {
-                    Subscription::Trades(instrument) => instrument.clone()
-                };
-
+                // Increment the Sequence number associated with this StreamId
                 let sequence = stream_meta.sequence;
                 *stream_meta.sequence.deref_mut() += 1;
 
-                (instrument, sequence)
+                (stream_meta.subscription.instrument.clone(), sequence)
             })
             .ok_or_else(|| SocketError::Unidentifiable(stream_id.0.clone()))
     }

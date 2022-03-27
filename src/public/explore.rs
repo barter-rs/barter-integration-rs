@@ -1,101 +1,82 @@
-use crate::{Instrument, InstrumentKind, public::{
-    MarketStream,
-    model::{Subscription, MarketEvent},
-    binance::futures::{BinanceFuturesItem, BinanceFuturesStream},
-}, socket::error::SocketError, Symbol};
+use crate::{
+    public::{
+        ExchangeId, MarketStream,
+        model::{Subscription, MarketEvent},
+        binance::futures::{BinanceFuturesItem, BinanceFuturesStream}
+    },
+    socket::error::SocketError, Symbol
+};
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use futures::StreamExt;
 use rust_decimal::prelude::Zero;
 use tokio::sync::mpsc;
 use tracing::warn;
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum Exchange {
-    BinanceFutures,
-}
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct StreamConfig {
-    pub instrument: Instrument,
-    pub kind: StreamKind,
-}
-
-impl<I> From<(I, StreamKind)> for StreamConfig
-where
-    I: Into<Instrument>
-{
-    fn from((instrument, kind): (I, StreamKind)) -> Self {
-        Self {
-            instrument: instrument.into(),
-            kind
-        }
-    }
-}
-
-impl<S> From<(S, S, InstrumentKind, StreamKind)> for StreamConfig
-where
-    S: Into<Symbol>
-{
-    fn from((base, quote, instrument, stream): (S, S, InstrumentKind, StreamKind)) -> Self {
-        Self {
-            instrument: Instrument::from((base, quote, instrument)),
-            kind: stream
-        }
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum StreamKind {
-    Trade,
-}
-
-
+// Todo:
+#[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct StreamBuilder {
-    config: HashMap<Exchange, Vec<StreamConfig>>,
+    subscriptions: HashMap<ExchangeId, Vec<Subscription>>,
+}
+
+// Todo: Probably make struct, impls, rust docs
+pub struct Streams(pub HashMap<ExchangeId, UnboundedReceiver<MarketEvent>>);
+
+impl Streams {
+    pub fn select(&mut self, exchange: ExchangeId) -> UnboundedReceiver<MarketEvent> {
+        self.0
+            .remove(&exchange)
+            .unwrap()
+    }
+
+    pub async fn join(mut self) -> UnboundedReceiverStream<MarketEvent>
 }
 
 impl StreamBuilder {
     pub fn new() -> Self {
         Self {
-            config: HashMap::new(),
+            subscriptions: HashMap::new(),
         }
     }
 
-    pub fn add<ConfigIter, Config>(mut self, exchange: Exchange, config: ConfigIter) -> Self
+    pub fn subscribe<SubIter, Sub>(mut self, exchange: ExchangeId, subscriptions: SubIter) -> Self
     where
-        ConfigIter: IntoIterator<Item = Config>,
-        Config: Into<StreamConfig>,
+        SubIter: IntoIterator<Item = Sub>,
+        Sub: Into<Subscription>,
     {
-        self.config.insert(exchange, config.into_iter().map(Config::into).collect());
+        self.subscriptions
+            .insert(exchange, subscriptions.into_iter().map(Sub::into).collect());
+
         self
     }
 
-    pub async fn build(self) -> Result<HashMap<Exchange, mpsc::UnboundedReceiver<MarketEvent>>, SocketError> {
-        if self.config.len().is_zero() {
-            return Err(SocketError::SubscribeError("no provided streams to subscribe to"));
+    pub async fn init(self) -> Result<Streams, SocketError> {
+        // Determine the number of Subscriptions
+        let num_subs = self.subscriptions.len();
+        if num_subs.is_zero() {
+            return Err(SocketError::SubscribeError("no provided Subscriptions to action".to_owned()));
         }
 
-        // Construct HashMap containing all each Exchange's stream receiver
-        let mut exchange_streams = HashMap::with_capacity(self.config.len());
+        // Construct HashMap containing each Exchange's stream receiver
+        let mut exchange_streams = HashMap::with_capacity(num_subs);
 
-        for (exchange, streams) in self.config.into_iter() {
-
-            let subscriptions = streams
-                .into_iter()
-                .map(Subscription::from)
-                .collect::<Vec<Subscription>>();
+        for (exchange, subscriptions) in self.subscriptions {
 
             let exchange_rx = match exchange {
-                Exchange::BinanceFutures => {
+                ExchangeId::BinanceFutures => {
                     consume::<BinanceFuturesStream, BinanceFuturesItem>(&subscriptions).await?
+                },
+                not_supported => {
+                    return Err(SocketError::SubscribeError(not_supported.to_string()))
                 }
             };
 
             exchange_streams.insert(exchange, exchange_rx);
         }
 
-        Ok(exchange_streams)
+        Ok(Streams(exchange_streams))
     }
 }
 

@@ -100,52 +100,53 @@ impl Symbol {
 mod tests {
     use std::fmt::Debug;
     use futures::StreamExt;
-    use crate::public::MarketStream;
+    use tracing::info;
+    use crate::public::{ExchangeId, MarketStream};
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
-    use crate::public::explore::{Exchange, StreamBuilder, StreamKind};
-    use crate::public::model::{MarketEvent, Subscription};
+    use crate::public::explore::StreamBuilder;
+    use crate::public::model::{MarketEvent, StreamKind, Subscription};
+    use crate::socket::error::SocketError;
     use super::*;
 
     // Todo: Add subscription validation - it currently fails silently
-
     // Todo: Maybe OutputIter will become an Option<OutputIter>?
-
     // Todo: Add proper error enum for BinanceMessage in Barter-Data
     //     '--> eg/ enum BinanceMessage { Error, BinancePayload }
-
     // Todo: Do I want to keep the name trait Exchange? Do I like the generic ExTransformer, etc.
 
-
     #[tokio::test]
-    async fn it_works() {
-        let subscriptions = [
-            Subscription::Trades(Instrument::new(
-                "btc", "usdt", InstrumentKind::Future)
-            ),
-            Subscription::Trades(Instrument::new(
-                "eth", "usdt", InstrumentKind::Future)
-            ),
-        ];
+    async fn stream_builder_works() -> Result<(), SocketError> {
 
-        run::<BinanceFuturesStream, BinanceFuturesItem>(&subscriptions).await;
-    }
 
-    #[tokio::test]
-    async fn stream_builder_works() {
-        let streams = [
-            // ("btc", "usdt", InstrumentKind::Future, StreamKind::Trade),
-            // ("eth", "usdt", InstrumentKind::Future, StreamKind::Trade),
-            ("ltc", "usdt", InstrumentKind::Future, StreamKind::Trade),
-        ];
+        let mut streams = StreamBuilder::new()
+            .subscribe(ExchangeId::BinanceFutures, [
+                ("btc", "usdt", InstrumentKind::Future, StreamKind::Trades),
+                ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
+            ])
+            .subscribe(ExchangeId::BinanceFutures, [
+                ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+                ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
+            ])
+            .subscribe(ExchangeId::Ftx, [
+                ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+                ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+            ])
+            .init()
+            .await?;
+            // .join();
 
-        let mut binance_rx = StreamBuilder::new()
-            .add(Exchange::BinanceFutures, streams)
-            .build()
-            .await.unwrap()
-            .remove(&Exchange::BinanceFutures).unwrap();
+        // Select individual exchange streams
+        let mut futures_stream = streams.select(ExchangeId::BinanceFutures);
+        let mut ftx_stream = streams.select(ExchangeId::Ftx);
 
-        while let Some(event) = binance_rx.recv().await {
-            println!("{:?}", event)
+        // Join the remaining exchange streams into one
+        let mut unified_stream = streams.join().await;
+
+        while let Some(event) = ftx_stream.next().await {
+            println!("{:?}", event);
         }
+
+
+        Ok(())
     }
 }

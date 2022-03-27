@@ -1,21 +1,43 @@
+use crate::{Instrument, InstrumentKind, Symbol};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Deref, DerefMut};
-use crate::Instrument;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize};
-use crate::public::explore::{StreamConfig, StreamKind};
 
 /// Todo:
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum Subscription {
-    Trades(Instrument),
+pub struct Subscription {
+    pub instrument: Instrument,
+    pub kind: StreamKind,
 }
 
-impl From<StreamConfig> for Subscription {
-    fn from(stream: StreamConfig) -> Self {
-        match stream.kind {
-            StreamKind::Trade => Self::Trades(stream.instrument)
+/// Todo:
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+pub enum StreamKind {
+    Trades,
+}
+
+impl<I> From<(I, StreamKind)> for Subscription
+where
+    I: Into<Instrument>
+{
+    fn from((instrument, kind): (I, StreamKind)) -> Self {
+        Self {
+            instrument: instrument.into(),
+            kind
+        }
+    }
+}
+
+impl<S> From<(S, S, InstrumentKind, StreamKind)> for Subscription
+where
+    S: Into<Symbol>
+{
+    fn from((base, quote, instrument, stream): (S, S, InstrumentKind, StreamKind)) -> Self {
+        Self {
+            instrument: Instrument::from((base, quote, instrument)),
+            kind: stream
         }
     }
 }

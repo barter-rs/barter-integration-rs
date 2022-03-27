@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum SocketError {
     #[error("error subscribing to resources over the socket: {0}")]
-    SubscribeError(&'static str),
+    SubscribeError(String),
 
     #[error("received unidentifiable message over the socket: {0}")]
     Unidentifiable(String),

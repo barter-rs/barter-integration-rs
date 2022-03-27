@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use rust_decimal::Decimal;
 use crate::Instrument;
 use crate::public::model::{Direction, MarketData, StreamId, Trade};
-use crate::public::StreamIdentifier;
+use crate::public::{ExchangeId, StreamIdentifier};
 use crate::util::epoch_ms_to_datetime_utc;
 
 /// Todo:
@@ -49,8 +49,8 @@ impl StreamIdentifier for BinanceTrade {
     }
 }
 
-impl From<(&str, Instrument, BinanceTrade)> for MarketData {
-    fn from((exchange, instrument, trade): (&str, Instrument, BinanceTrade)) -> Self {
+impl From<(ExchangeId, Instrument, BinanceTrade)> for MarketData {
+    fn from((exchange, instrument, trade): (ExchangeId, Instrument, BinanceTrade)) -> Self {
         Self::Trade(Trade {
             id: trade.id.to_string(),
             exchange: exchange.to_string(),

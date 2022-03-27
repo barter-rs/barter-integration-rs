@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::{
     socket::{
         ExchangeSocket, Transformer,
@@ -6,6 +7,7 @@ use crate::{
     },
     public::model::{Subscription, StreamId, MarketEvent},
 };
+use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use futures::{SinkExt, Stream};
 
@@ -13,6 +15,24 @@ use futures::{SinkExt, Stream};
 pub mod model;
 pub mod binance;
 pub mod explore;
+
+// Todo: Rust docs, add basic impls, change name to ExchangeId ? Produce &'static str
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+pub enum ExchangeId {
+    BinanceFutures,
+    Binance,
+    Ftx,
+}
+
+impl Display for ExchangeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            ExchangeId::BinanceFutures => "binance_futures",
+            ExchangeId::Binance => "binance",
+            ExchangeId::Ftx => "ftx",
+        })
+    }
+}
 
 /// Todo:
 pub trait StreamIdentifier {
@@ -29,11 +49,11 @@ where
 }
 
 /// Todo:
-pub trait Exchange: Sized
+pub trait ExchangeTransformer: Sized
 where
     Self: Transformer<MarketEvent>,
 {
-    const EXCHANGE: &'static str;
+    const EXCHANGE: ExchangeId;
     const BASE_URL: &'static str;
     fn new() -> Self;
     fn generate_subscriptions(&mut self, subscriptions: &[Subscription]) -> Vec<serde_json::Value>;
@@ -44,7 +64,7 @@ impl<ExchangeT, OutputIter> MarketStream<OutputIter>
     for ExchangeWebSocket<ExchangeT, ExchangeT::Input, MarketEvent>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
-    ExchangeT: Exchange + Send,
+    ExchangeT: ExchangeTransformer + Send,
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {
