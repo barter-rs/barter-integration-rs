@@ -4,11 +4,20 @@ use crate::Instrument;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize};
+use crate::public::explore::{StreamConfig, StreamKind};
 
 /// Todo:
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Subscription {
     Trades(Instrument),
+}
+
+impl From<StreamConfig> for Subscription {
+    fn from(stream: StreamConfig) -> Self {
+        match stream.kind {
+            StreamKind::Trade => Self::Trades(stream.instrument)
+        }
+    }
 }
 
 /// Todo:

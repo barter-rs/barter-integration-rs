@@ -83,9 +83,7 @@ impl StreamBuilder {
 
             let subscriptions = streams
                 .into_iter()
-                .map(|stream| match stream.kind {
-                    StreamKind::Trade => Subscription::Trades(stream.instrument)
-                })
+                .map(Subscription::from)
                 .collect::<Vec<Subscription>>();
 
             let exchange_rx = match exchange {

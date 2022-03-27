@@ -106,9 +106,7 @@ mod tests {
     use crate::public::model::{MarketEvent, Subscription};
     use super::*;
 
-    // Todo: Find a way to remove SocketItem... it surely isn't needed.
-
-    // Todo: Is it possible to pair the Socket & ProtocolParser generics eg/ 'SocketParser'
+    // Todo: Add subscription validation - it currently fails silently
 
     // Todo: Maybe OutputIter will become an Option<OutputIter>?
 
@@ -117,32 +115,6 @@ mod tests {
 
     // Todo: Do I want to keep the name trait Exchange? Do I like the generic ExTransformer, etc.
 
-    async fn run<S, OutputIter>(subscriptions: &[Subscription])
-    where
-        S: MarketStream<OutputIter>,
-        OutputIter: IntoIterator<Item = MarketEvent>,
-        <<OutputIter as IntoIterator>::IntoIter as Iterator>::Item: Debug,
-    {
-        let mut stream = S::init(subscriptions)
-            .await
-            .expect("failed to init stream");
-
-        while let Some(result) = stream.next().await {
-            match result {
-                Ok(market_data) => {
-                    market_data
-                        .into_iter()
-                        .for_each(|event| {
-                            println!("{:?}", event);
-                        })
-                }
-                Err(err) => {
-                    println!("{:?}", err);
-                    break;
-                }
-            }
-        }
-    }
 
     #[tokio::test]
     async fn it_works() {
@@ -161,7 +133,9 @@ mod tests {
     #[tokio::test]
     async fn stream_builder_works() {
         let streams = [
-            ("btc", "usdt", InstrumentKind::Future, StreamKind::Trade)
+            // ("btc", "usdt", InstrumentKind::Future, StreamKind::Trade),
+            // ("eth", "usdt", InstrumentKind::Future, StreamKind::Trade),
+            ("ltc", "usdt", InstrumentKind::Future, StreamKind::Trade),
         ];
 
         let mut binance_rx = StreamBuilder::new()
