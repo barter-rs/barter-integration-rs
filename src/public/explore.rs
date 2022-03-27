@@ -1,12 +1,8 @@
-use crate::{
-    Instrument,
-    public::{
-        MarketStream,
-        model::{Subscription, MarketEvent},
-        binance::futures::{BinanceFuturesItem, BinanceFuturesStream},
-    },
-    socket::error::SocketError
-};
+use crate::{Instrument, InstrumentKind, public::{
+    MarketStream,
+    model::{Subscription, MarketEvent},
+    binance::futures::{BinanceFuturesItem, BinanceFuturesStream},
+}, socket::error::SocketError, Symbol};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use futures::StreamExt;
@@ -23,6 +19,30 @@ pub enum Exchange {
 pub struct StreamConfig {
     pub instrument: Instrument,
     pub kind: StreamKind,
+}
+
+impl<I> From<(I, StreamKind)> for StreamConfig
+where
+    I: Into<Instrument>
+{
+    fn from((instrument, kind): (I, StreamKind)) -> Self {
+        Self {
+            instrument: instrument.into(),
+            kind
+        }
+    }
+}
+
+impl<S> From<(S, S, InstrumentKind, StreamKind)> for StreamConfig
+where
+    S: Into<Symbol>
+{
+    fn from((base, quote, instrument, stream): (S, S, InstrumentKind, StreamKind)) -> Self {
+        Self {
+            instrument: Instrument::from((base, quote, instrument)),
+            kind: stream
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -42,8 +62,12 @@ impl StreamBuilder {
         }
     }
 
-    pub fn add(mut self, exchange: Exchange, config: Vec<StreamConfig>) -> Self {
-        self.config.insert(exchange, config);
+    pub fn add<ConfigIter, Config>(mut self, exchange: Exchange, config: ConfigIter) -> Self
+    where
+        ConfigIter: IntoIterator<Item = Config>,
+        Config: Into<StreamConfig>,
+    {
+        self.config.insert(exchange, config.into_iter().map(Config::into).collect());
         self
     }
 

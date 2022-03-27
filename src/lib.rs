@@ -8,9 +8,22 @@ pub mod util;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Instrument {
-    pub kind: InstrumentKind,
     pub base: Symbol,
     pub quote: Symbol,
+    pub kind: InstrumentKind,
+}
+
+impl<S> From<(S, S, InstrumentKind)> for Instrument
+where
+    S: Into<Symbol>,
+{
+    fn from((base, quote, kind): (S, S, InstrumentKind)) -> Self {
+        Self {
+            base: base.into(),
+            quote: quote.into(),
+            kind
+        }
+    }
 }
 
 impl Instrument {
@@ -19,9 +32,9 @@ impl Instrument {
         S: Into<Symbol>
     {
         Self {
-            kind,
             base: base.into(),
             quote: quote.into(),
+            kind,
         }
     }
 }
@@ -89,7 +102,7 @@ mod tests {
     use futures::StreamExt;
     use crate::public::MarketStream;
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
-    use crate::public::explore::{Exchange, StreamBuilder, StreamConfig, StreamKind};
+    use crate::public::explore::{Exchange, StreamBuilder, StreamKind};
     use crate::public::model::{MarketEvent, Subscription};
     use super::*;
 
@@ -147,13 +160,9 @@ mod tests {
 
     #[tokio::test]
     async fn stream_builder_works() {
-        let streams = vec![
-            StreamConfig {
-                instrument: Instrument::new("btc", "usdt", InstrumentKind::Future),
-                kind: StreamKind::Trade
-            }
+        let streams = [
+            ("btc", "usdt", InstrumentKind::Future, StreamKind::Trade)
         ];
-
 
         let mut binance_rx = StreamBuilder::new()
             .add(Exchange::BinanceFutures, streams)
