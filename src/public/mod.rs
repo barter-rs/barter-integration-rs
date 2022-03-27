@@ -1,19 +1,19 @@
 use crate::{
     socket::{
         ExchangeSocket, Transformer,
-        protocol::websocket::{connect, WebSocket, WebSocketParser, WsMessage},
+        protocol::websocket::{connect, WebSocket, WebSocketParser, WsMessage, ExchangeWebSocket},
         error::SocketError
     },
-    public::model::Subscription,
+    public::model::{Subscription, StreamId, MarketEvent},
 };
 use async_trait::async_trait;
-use futures::{SinkExt, Stream};
+use futures::{Sink, SinkExt, Stream};
 use serde::de::DeserializeOwned;
-use crate::public::model::{MarketEvent, StreamId};
 
 /// Todo:
 pub mod model;
 pub mod binance;
+pub mod explore;
 
 /// Todo:
 pub trait StreamIdentifier {
@@ -22,7 +22,7 @@ pub trait StreamIdentifier {
 
 /// Todo:
 #[async_trait]
-pub trait MarketDataStream<OutputIter>: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin
+pub trait MarketStream<OutputIter>: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin
 where
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
@@ -42,20 +42,20 @@ where
 }
 
 #[async_trait]
-impl<ExTransformer, ExMessage, OutputIter> MarketDataStream<OutputIter>
-    for ExchangeSocket<WebSocket, WsMessage, WebSocketParser, ExTransformer, ExMessage, MarketEvent>
+impl<ExchangeT, ExMessage, OutputIter> MarketStream<OutputIter>
+    for ExchangeWebSocket<ExchangeT, ExMessage, OutputIter>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
-    ExTransformer: Exchange<ExMessage> + Send,
+    ExchangeT: Exchange<ExMessage> + Send,
     ExMessage: DeserializeOwned,
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {
-        // Construct Exchange w/ functionality to translating between Barter & exchange structures
-        let mut exchange = ExTransformer::new();
+        // Construct Exchange Transformer to translate between Barter & exchange data structures
+        let mut exchange = ExchangeT::new();
 
         // Connect to exchange WebSocket server
-        let mut websocket = connect(ExTransformer::BASE_URL).await?;
+        let mut websocket = connect(ExchangeT::BASE_URL).await?;
 
         // Action Subscriptions over the socket
         for sub_payload in exchange.generate_subscriptions(subscriptions) {

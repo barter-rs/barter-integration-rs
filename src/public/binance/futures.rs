@@ -17,8 +17,10 @@ use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use crate::public::model::StreamMeta;
+use crate::socket::protocol::websocket::ExchangeWebSocket;
 
-pub type BinanceFuturesStream = ExchangeSocket<WebSocket, WsMessage, WebSocketParser, BinanceFutures, BinanceMessage, MarketEvent>;
+// Todo: Can I simplify these ie/ remove generics or derive some generics from others
+pub type BinanceFuturesStream = ExchangeWebSocket<BinanceFutures, BinanceMessage, MarketEvent>;
 pub type BinanceFuturesItem = std::option::IntoIter<MarketEvent>;
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
@@ -45,7 +47,7 @@ impl Exchange<BinanceMessage> for BinanceFutures {
                 // Add channel with the associated original Subscription to the internal HashMap
                 self.streams
                     .insert(channel.clone(), StreamMeta::new(subscription.clone()));
-
+v
                 channel
             })
             .collect::<Vec<StreamId>>();
@@ -60,7 +62,7 @@ impl Exchange<BinanceMessage> for BinanceFutures {
 }
 
 impl Transformer<BinanceMessage, MarketEvent> for BinanceFutures {
-    type OutputIter = std::option::IntoIter<MarketEvent>; // Todo:
+    type OutputIter = BinanceFuturesItem;
 
     fn transform(&mut self, input: BinanceMessage) -> Result<Self::OutputIter, SocketError> {
         match input {
