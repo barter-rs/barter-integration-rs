@@ -1,14 +1,13 @@
 use crate::{
     socket::{
         ExchangeSocket, Transformer,
-        protocol::websocket::{connect, WebSocket, WebSocketParser, WsMessage, ExchangeWebSocket},
+        protocol::websocket::{connect, WebSocketParser, WsMessage, ExchangeWebSocket},
         error::SocketError
     },
     public::model::{Subscription, StreamId, MarketEvent},
 };
 use async_trait::async_trait;
-use futures::{Sink, SinkExt, Stream};
-use serde::de::DeserializeOwned;
+use futures::{SinkExt, Stream};
 
 /// Todo:
 pub mod model;
@@ -41,12 +40,11 @@ where
 }
 
 #[async_trait]
-impl<ExchangeT, ExMessage, OutputIter> MarketStream<OutputIter>
-    for ExchangeWebSocket<ExchangeT, ExMessage, MarketEvent>
+impl<ExchangeT, OutputIter> MarketStream<OutputIter>
+    for ExchangeWebSocket<ExchangeT, ExchangeT::Input, MarketEvent>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
     ExchangeT: Exchange + Send,
-    ExMessage: DeserializeOwned,
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {

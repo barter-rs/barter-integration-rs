@@ -1,24 +1,20 @@
 use crate::{
     Instrument,
     socket::{
-        ExchangeSocket,
         error::SocketError,
-        protocol::websocket::{WebSocket, WebSocketParser, WsMessage}
+        protocol::websocket::ExchangeWebSocket,
     },
     public::{
         StreamIdentifier,
         Exchange, Transformer,
-        model::{Subscription, MarketEvent, Sequence, MarketData},
+        model::{Subscription, StreamMeta, MarketEvent, Sequence, MarketData},
         binance::{StreamId, BinanceMessage},
     },
 };
 use std::collections::HashMap;
 use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
 use serde_json::json;
-use crate::public::model::StreamMeta;
-use crate::socket::protocol::websocket::ExchangeWebSocket;
 
 // Todo: Can I simplify these ie/ remove generics or derive some generics from others
 pub type BinanceFuturesStream = ExchangeWebSocket<BinanceFutures, BinanceMessage, MarketEvent>;
