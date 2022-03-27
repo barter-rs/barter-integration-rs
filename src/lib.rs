@@ -89,6 +89,7 @@ mod tests {
     use futures::StreamExt;
     use crate::public::MarketStream;
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
+    use crate::public::explore::{Exchange, StreamBuilder, StreamConfig, StreamKind};
     use crate::public::model::{MarketEvent, Subscription};
     use super::*;
 
@@ -142,5 +143,26 @@ mod tests {
         ];
 
         run::<BinanceFuturesStream, BinanceFuturesItem>(&subscriptions).await;
+    }
+
+    #[tokio::test]
+    async fn stream_builder_works() {
+        let streams = vec![
+            StreamConfig {
+                instrument: Instrument::new("btc", "usdt", InstrumentKind::Future),
+                kind: StreamKind::Trade
+            }
+        ];
+
+
+        let mut binance_rx = StreamBuilder::new()
+            .add(Exchange::BinanceFutures, streams)
+            .build()
+            .await.unwrap()
+            .remove(&Exchange::BinanceFutures).unwrap();
+
+        while let Some(event) = binance_rx.recv().await {
+            println!("{:?}", event)
+        }
     }
 }
