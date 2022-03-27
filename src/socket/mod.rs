@@ -13,12 +13,10 @@ use serde::de::DeserializeOwned;
 use pin_project::pin_project;
 use futures::{Sink, Stream};
 
-pub trait Transformer<Input, Output>
-where
-    Input: DeserializeOwned,
-{
+pub trait Transformer<Output> {
+    type Input: DeserializeOwned;
     type OutputIter: IntoIterator<Item = Output>;
-    fn transform(&mut self, input: Input) -> Result<Self::OutputIter, SocketError>;
+    fn transform(&mut self, input: Self::Input) -> Result<Self::OutputIter, SocketError>;
 }
 
 #[pin_project]
@@ -26,7 +24,7 @@ pub struct ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, E
 where
     Socket: Sink<SocketItem> + Stream,
     StreamParser: ProtocolParser<ExchangeMessage>,
-    StreamTransformer: Transformer<ExchangeMessage, Output>,
+    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
     #[pin]
@@ -43,7 +41,7 @@ impl<Socket, SocketItem, StreamItem, StreamParser, StreamTransformer, ExchangeMe
 where
     Socket: Sink<SocketItem> + Stream<Item = StreamItem>,
     StreamParser: ProtocolParser<ExchangeMessage, Input = StreamItem>,
-    StreamTransformer: Transformer<ExchangeMessage, Output>,
+    StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
 {
     type Item = Result<StreamTransformer::OutputIter, SocketError>;
@@ -82,7 +80,7 @@ impl<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Outpu
 where
     Socket: Sink<SocketItem> + Stream,
     StreamParser: ProtocolParser<ExchangeMessage>,
-    StreamTransformer: Transformer<ExchangeMessage, Output>,
+    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
     type Error = SocketError;
@@ -109,7 +107,7 @@ impl<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Outpu
 where
     Socket: Sink<SocketItem> + Stream,
     StreamParser: ProtocolParser<ExchangeMessage>,
-    StreamTransformer: Transformer<ExchangeMessage, Output>,
+    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
     pub fn new(socket: Socket, parser: StreamParser, transformer: StreamTransformer) -> Self {

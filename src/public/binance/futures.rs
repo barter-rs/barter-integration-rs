@@ -15,6 +15,7 @@ use crate::{
 use std::collections::HashMap;
 use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use serde_json::json;
 use crate::public::model::StreamMeta;
 use crate::socket::protocol::websocket::ExchangeWebSocket;
@@ -28,7 +29,7 @@ pub struct BinanceFutures {
     pub streams: HashMap<StreamId, StreamMeta>
 }
 
-impl Exchange<BinanceMessage> for BinanceFutures {
+impl Exchange for BinanceFutures {
     const EXCHANGE: &'static str = "binance_futures";
     const BASE_URL: &'static str = "wss://fstream.binance.com/ws";
 
@@ -47,7 +48,7 @@ impl Exchange<BinanceMessage> for BinanceFutures {
                 // Add channel with the associated original Subscription to the internal HashMap
                 self.streams
                     .insert(channel.clone(), StreamMeta::new(subscription.clone()));
-v
+
                 channel
             })
             .collect::<Vec<StreamId>>();
@@ -61,7 +62,8 @@ v
     }
 }
 
-impl Transformer<BinanceMessage, MarketEvent> for BinanceFutures {
+impl Transformer<MarketEvent> for BinanceFutures {
+    type Input = BinanceMessage;
     type OutputIter = BinanceFuturesItem;
 
     fn transform(&mut self, input: BinanceMessage) -> Result<Self::OutputIter, SocketError> {

@@ -30,10 +30,9 @@ where
 }
 
 /// Todo:
-pub trait Exchange<ExMessage>: Sized
+pub trait Exchange: Sized
 where
-    Self: Transformer<ExMessage, MarketEvent>,
-    ExMessage: DeserializeOwned,
+    Self: Transformer<MarketEvent>,
 {
     const EXCHANGE: &'static str;
     const BASE_URL: &'static str;
@@ -43,10 +42,10 @@ where
 
 #[async_trait]
 impl<ExchangeT, ExMessage, OutputIter> MarketStream<OutputIter>
-    for ExchangeWebSocket<ExchangeT, ExMessage, OutputIter>
+    for ExchangeWebSocket<ExchangeT, ExMessage, MarketEvent>
 where
     Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
-    ExchangeT: Exchange<ExMessage> + Send,
+    ExchangeT: Exchange + Send,
     ExMessage: DeserializeOwned,
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
