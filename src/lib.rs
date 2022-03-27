@@ -87,7 +87,7 @@ impl Symbol {
 mod tests {
     use std::fmt::Debug;
     use futures::StreamExt;
-    use crate::public::MarketDataStream;
+    use crate::public::MarketStream;
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
     use crate::public::model::{MarketEvent, Subscription};
     use super::*;
@@ -105,7 +105,7 @@ mod tests {
 
     async fn run<S, OutputIter>(subscriptions: &[Subscription])
     where
-        S: MarketDataStream<OutputIter>,
+        S: MarketStream<OutputIter>,
         OutputIter: IntoIterator<Item = MarketEvent>,
         <<OutputIter as IntoIterator>::IntoIter as Iterator>::Item: Debug,
     {
