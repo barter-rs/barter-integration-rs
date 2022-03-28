@@ -36,18 +36,18 @@ impl ExchangeTransformer for BinanceFutures {
     }
 
     fn generate_subscriptions(&mut self, subscriptions: &[Subscription]) -> Vec<serde_json::Value> {
-        // Map Barter Subscriptions to a vector of BinanceFutures specific channels
+        // Map Barter Subscriptions to a vector of BinanceFutures StreamIds
         let channels = subscriptions
             .into_iter()
             .map(|subscription| {
                 // Determine the BinanceFutures specific channel for this Subscription
-                let channel = BinanceFutures::get_stream_id(subscription);
+                let stream_id = BinanceFutures::get_stream_id(subscription);
 
                 // Add channel with the associated original Subscription to the internal HashMap
                 self.streams
-                    .insert(channel.clone(), StreamMeta::new(subscription.clone()));
+                    .insert(stream_id.clone(), StreamMeta::new(subscription.clone()));
 
-                channel
+                stream_id
             })
             .collect::<Vec<StreamId>>();
 

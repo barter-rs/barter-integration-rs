@@ -42,7 +42,8 @@ where
     }
 }
 
-/// Todo:
+/// Normalised Barter `MarketEvent` containing a [`MarketData`] variant, and the associated
+/// `timestamp` and `sequence` number metadata.
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct MarketEvent {
     pub sequence: Sequence,
