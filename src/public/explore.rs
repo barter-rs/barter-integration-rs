@@ -25,13 +25,29 @@ pub struct StreamBuilder {
 pub struct Streams(pub HashMap<ExchangeId, UnboundedReceiver<MarketEvent>>);
 
 impl Streams {
-    pub fn select(&mut self, exchange: ExchangeId) -> UnboundedReceiver<MarketEvent> {
-        self.0
-            .remove(&exchange)
-            .unwrap()
+    pub fn builder() -> StreamBuilder {
+        StreamBuilder::new()
     }
 
-    pub async fn join(mut self) -> UnboundedReceiverStream<MarketEvent>
+    pub fn select(&mut self, exchange: ExchangeId) -> Option<UnboundedReceiver<MarketEvent>> {
+        self.0.remove(&exchange)
+    }
+
+    pub async fn join(mut self) -> UnboundedReceiver<MarketEvent> {
+        // Use
+        let (joined_tx, joined_rx) = mpsc::unbounded_channel();
+
+        for mut exchange_rx in self.0.into_values() {
+            let tx = joined_tx.clone();
+            tokio::spawn(async move {
+                while let Some(event) = exchange_rx.recv().await {
+                    let _ = tx.send(event);
+                }
+            });
+        }
+
+        joined_rx
+    }
 }
 
 impl StreamBuilder {
@@ -85,6 +101,8 @@ where
     S: MarketStream<OutputIter> + Send + 'static,
     OutputIter: IntoIterator<Item = MarketEvent>,
 {
+    // Add loop for re-connections, etc.
+
     let mut stream = S::init(subscriptions).await?;
 
     let (stream_tx, stream_rx) = mpsc::unbounded_channel();

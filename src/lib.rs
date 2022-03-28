@@ -103,7 +103,7 @@ mod tests {
     use tracing::info;
     use crate::public::{ExchangeId, MarketStream};
     use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
-    use crate::public::explore::StreamBuilder;
+    use crate::public::explore::{StreamBuilder, Streams};
     use crate::public::model::{MarketEvent, StreamKind, Subscription};
     use crate::socket::error::SocketError;
     use super::*;
@@ -115,33 +115,38 @@ mod tests {
     // Todo: Do I want to keep the name trait Exchange? Do I like the generic ExTransformer, etc.
 
     #[tokio::test]
-    async fn stream_builder_works() -> Result<(), SocketError> {
+    async fn stream_builder_works() -> Result<(), Box<dyn std::error::Error>> {
 
-
-        let mut streams = StreamBuilder::new()
+        let streams = Streams::builder()
             .subscribe(ExchangeId::BinanceFutures, [
                 ("btc", "usdt", InstrumentKind::Future, StreamKind::Trades),
                 ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
             ])
-            .subscribe(ExchangeId::Binance, [
-                ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-                ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            ])
-            .subscribe(ExchangeId::Ftx, [
-                ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-                ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            ])
+            // .subscribe(ExchangeId::Binance, [
+            //     ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+            //     ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+            // ])
+            // .subscribe(ExchangeId::Ftx, [
+            //     ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+            //     ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
+            // ])
             .init()
             .await?;
 
         // Select individual exchange streams
-        let mut futures_stream = streams.select(ExchangeId::BinanceFutures);
-        let mut ftx_stream = streams.select(ExchangeId::Ftx);
+        // let mut futures_stream = streams
+        //     .select(ExchangeId::BinanceFutures)
+        //     .ok_or(SocketError::Unidentifiable("".to_owned()))?; // Todo
+
+
+        // let mut ftx_stream = streams
+        //     .select(ExchangeId::Ftx)
+        //     .ok_or(SocketError::Unidentifiable("".to_owned()))?; // Todo:
 
         // Join the remaining exchange streams into one
-        let mut unified_stream = streams.join().await;
+        let mut joined_stream = streams.join().await;
 
-        while let Some(event) = ftx_stream.next().await {
+        while let Some(event) = joined_stream.recv().await {
             println!("{:?}", event);
         }
 
