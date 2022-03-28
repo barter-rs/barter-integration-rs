@@ -145,7 +145,6 @@ mod tests {
             println!("{:?}", event);
         }
 
-
         Ok(())
     }
 }
