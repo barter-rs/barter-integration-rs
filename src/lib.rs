@@ -123,9 +123,9 @@ mod tests {
                 ("btc", "usdt", InstrumentKind::Future, StreamKind::Trades),
                 ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
             ])
-            .subscribe(ExchangeId::BinanceFutures, [
+            .subscribe(ExchangeId::Binance, [
                 ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-                ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
+                ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
             ])
             .subscribe(ExchangeId::Ftx, [
                 ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
@@ -133,7 +133,6 @@ mod tests {
             ])
             .init()
             .await?;
-            // .join();
 
         // Select individual exchange streams
         let mut futures_stream = streams.select(ExchangeId::BinanceFutures);
