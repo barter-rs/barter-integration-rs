@@ -34,7 +34,7 @@ where
 {
     type Input = Result<WsMessage, WsError>;
 
-    fn parse(input: Self::Input) -> Result<Option<ExchangeMessage>, SocketError> {
+    fn parse(input: Self::Input) -> Option<Result<ExchangeMessage, SocketError>> {
         match input {
             Ok(ws_message) => match ws_message {
                 WsMessage::Text(text) => process_payload(text.into_bytes()),
@@ -49,39 +49,39 @@ where
 }
 
 /// Process a payload of bytes by deserialising into an `ExchangeMessage`.
-pub fn process_payload<ExchangeMessage>(payload: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError>
+pub fn process_payload<ExchangeMessage>(payload: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>>
 where
     ExchangeMessage: DeserializeOwned,
 {
-    serde_json::from_slice::<ExchangeMessage>(&payload)
-        .map(Option::Some)
+    Some(serde_json::from_slice::<ExchangeMessage>(&payload)
         .map_err(|err| {
             warn!(
                 error = &*format!("{:?}", err),
                 payload = &*format!("{:?}", payload),
-                action = "skipping message",
+                action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
             SocketError::SerdeJsonError(err)
         })
+    )
 }
 
 /// Basic process for a WebSocket ping message. Logs the payload at `trace` level.
-pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError> {
+pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>> {
     trace!(payload = &*format!("{:?}", ping), "received Ping WebSocket message");
-    Ok(None)
+    None
 }
 
 /// Basic process for a WebSocket pong message. Logs the payload at `trace` level.
-pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Result<Option<ExchangeMessage>, SocketError> {
+pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>> {
     trace!(payload = &*format!("{:?}", pong), "received Pong WebSocket message");
-    Ok(None)
+    None
 }
 
 /// Basic process for a WebSocket CloseFrame message. Logs the payload at `trace` level.
-pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame>) -> Result<Option<ExchangeMessage>, SocketError> {
+pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame>) -> Option<Result<ExchangeMessage, SocketError>> {
     trace!(payload = &*format!("{:?}", close_frame), "received CloseFrame WebSocket message");
-    Ok(None)
+    None
 }
 
 /// Connect asynchronously to [`WebSocket`] server.
