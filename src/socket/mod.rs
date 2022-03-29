@@ -53,14 +53,26 @@ where
             Poll::Ready(Some(input)) => {
                 // Parse ExchangeMessage from Socket Stream<Item = StreamItem> & transform to Output
                 match StreamParser::parse(input) {
-                    Ok(Some(exchange_message)) => {
-                        Poll::Ready(Some(this.transformer.transform(exchange_message)))
-                    }
-                    Ok(None) => {
-                        // If parser succeeds but returns None it's a safe-to-skip message
+                    // If parser returns None it's a safe-to-skip message
+                    None => {
                         Poll::Pending
                     }
-                    Err(err) => {
+                    Some(Ok(exchange_message)) => {
+                        // Transform: Result<Vec<MarketEvent>, SocketError>
+                        // eg/ Err(Unidentifiable Message)
+                        // eg/ Ok(None) for SubscriptionSuccess
+                        // eg/ Ok(Some(MarketEvent).into_iter())
+
+                        // alternative:
+                        // Transform: Option<Result<Vec<MarketEvent>, SocketError>>
+
+                        // alternative:
+                        // Iterator<Result<MarketEvent, SocketError>>
+
+                        //  '--> Wrapped in Option<TransformResult>
+                        Poll::Ready(Some(this.transformer.transform(exchange_message)))
+                    },
+                    Some(Err(err)) => {
                         Poll::Ready(Some(Err(err)))
                     }
                 }
