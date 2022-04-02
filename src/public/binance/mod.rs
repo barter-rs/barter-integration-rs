@@ -24,6 +24,12 @@ pub struct BinanceSubscribed {
     id: u32,
 }
 
+impl BinanceSubscribed {
+    pub fn is_failure(&self) -> bool {
+        self.result.is_some()
+    }
+}
+
 /// Binance specific Trade message.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct BinanceTrade {
