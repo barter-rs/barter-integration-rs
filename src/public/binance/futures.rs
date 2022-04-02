@@ -1,13 +1,13 @@
 use crate::{
     Instrument,
     socket::{
+        Transformer,
         error::SocketError,
         protocol::websocket::ExchangeWebSocket,
     },
     public::{
-        StreamIdentifier,
-        ExchangeId, Transformer,
-        model::{Subscription, StreamMeta, MarketEvent, Sequence, MarketData},
+        StreamIdentifier, ExchangeId, ExchangeTransformer,
+        model::{Subscription, StreamKind, StreamMeta, MarketEvent, Sequence, MarketData},
         binance::{StreamId, BinanceMessage},
     },
 };
@@ -15,12 +15,9 @@ use std::collections::HashMap;
 use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::public::ExchangeTransformer;
-use crate::public::model::StreamKind;
 
 // Todo: Can I simplify these ie/ remove generics or derive some generics from others
 pub type BinanceFuturesStream = ExchangeWebSocket<BinanceFutures, BinanceMessage, MarketEvent>;
-pub type BinanceFuturesItem = std::option::IntoIter<MarketEvent>;
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]
 pub struct BinanceFutures {
@@ -62,28 +59,37 @@ impl ExchangeTransformer for BinanceFutures {
 
 impl Transformer<MarketEvent> for BinanceFutures {
     type Input = BinanceMessage;
-    type OutputIter = BinanceFuturesItem;
+    type OutputIter = Vec<Result<MarketEvent, SocketError>>;
 
-    fn transform(&mut self, input: BinanceMessage) -> Result<Self::OutputIter, SocketError> {
+    fn transform(&mut self, input: Self::Input) -> Self::OutputIter {
+        // Output vector to return (only ever 0 or 1 length)
+        let mut output_iter = Vec::with_capacity(1);
+
         match input {
-            BinanceMessage::Subscribed(sub_confirm) => {
-                if sub_confirm.result.is_some() {
-                    Err(SocketError::SubscribeError("".to_string()))
-                } else {
-                    Ok(None.into_iter())
+            BinanceMessage::Subscribed(sub_outcome) => {
+                if sub_outcome.is_failure() {
+                    output_iter.push(Err(SocketError::SubscribeError(
+                        "received Binance subscription failure".to_string()
+                    )))
                 }
             }
             BinanceMessage::Trade(trade) => {
-                let (instrument, sequence) = self.get_stream_meta(
-                    &trade.to_stream_id()
-                )?;
+                let (instrument, sequence) = match self.get_stream_meta(&trade.to_stream_id()) {
+                    Ok(stream_meta) => stream_meta,
+                    Err(err) => {
+                        output_iter.push(Err(err));
+                        return output_iter;
+                    },
+                };
 
-                Ok(Some(MarketEvent::new(
+                output_iter.push(Ok(MarketEvent::new(
                     sequence,
                     MarketData::from((BinanceFutures::EXCHANGE, instrument, trade))
-                )).into_iter())
+                )))
             }
-        }
+        };
+
+        output_iter
     }
 }
 
