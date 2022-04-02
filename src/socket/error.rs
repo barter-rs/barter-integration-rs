@@ -5,7 +5,10 @@ pub enum SocketError {
     #[error("error subscribing to resources over the socket: {0}")]
     SubscribeError(String),
 
-    #[error("received unidentifiable message over the socket: {0}")]
+    #[error("ExchangeSocket terminated with closing frame: {0}")]
+    Terminated(String),
+
+    #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(String),
 
     #[error("WebSocket error: {0}")]
