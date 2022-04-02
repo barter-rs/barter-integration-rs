@@ -10,5 +10,5 @@ where
     Output: DeserializeOwned,
 {
     type Input;
-    fn parse(input: Self::Input) -> Option<Result<Output, SocketError>;
+    fn parse(input: Self::Input) -> Option<Result<Output, SocketError>>;
 }
