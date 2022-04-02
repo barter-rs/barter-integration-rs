@@ -41,10 +41,7 @@ pub trait StreamIdentifier {
 
 /// Todo:
 #[async_trait]
-pub trait MarketStream<OutputIter>: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin
-where
-    OutputIter: IntoIterator<Item = MarketEvent>,
-{
+pub trait MarketStream: Stream<Item = Result<MarketEvent, SocketError>> + Sized + Unpin {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError>;
 }
 
@@ -60,12 +57,10 @@ where
 }
 
 #[async_trait]
-impl<ExchangeT, OutputIter> MarketStream<OutputIter>
-    for ExchangeWebSocket<ExchangeT, ExchangeT::Input, MarketEvent>
+impl<ExchangeT> MarketStream for ExchangeWebSocket<ExchangeT, ExchangeT::Input, MarketEvent>
 where
-    Self: Stream<Item = Result<OutputIter, SocketError>> + Sized + Unpin,
+    Self: Stream<Item = Result<MarketEvent, SocketError>> + Sized + Unpin,
     ExchangeT: ExchangeTransformer + Send,
-    OutputIter: IntoIterator<Item = MarketEvent>,
 {
     async fn init(subscriptions: &[Subscription]) -> Result<Self, SocketError> {
         // Construct Exchange Transformer to translate between Barter & exchange data structures
