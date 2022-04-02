@@ -43,7 +43,7 @@ where
                 WsMessage::Pong(pong) => process_pong(pong),
                 WsMessage::Close(close_frame) => process_close_frame(close_frame),
             },
-            Err(ws_err) => Err(SocketError::WebSocketError(ws_err))
+            Err(ws_err) => Some(Err(SocketError::WebSocketError(ws_err)))
         }
     }
 }
@@ -80,8 +80,9 @@ pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Option<Result<ExchangeMes
 
 /// Basic process for a WebSocket CloseFrame message. Logs the payload at `trace` level.
 pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame>) -> Option<Result<ExchangeMessage, SocketError>> {
-    trace!(payload = &*format!("{:?}", close_frame), "received CloseFrame WebSocket message");
-    None
+    let close_frame = format!("{:?}", close_frame);
+    debug!(payload = &*close_frame, "received CloseFrame WebSocket message");
+    Some(Err(SocketError::Terminated(close_frame)))
 }
 
 /// Connect asynchronously to [`WebSocket`] server.
