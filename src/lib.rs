@@ -15,6 +15,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub mod socket;
 pub mod util;
 
+/// Todo:
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Instrument {
     pub base: Symbol,
@@ -42,6 +43,7 @@ where
 }
 
 impl Instrument {
+    /// Todo:
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
     where
         S: Into<Symbol>
@@ -54,6 +56,7 @@ impl Instrument {
     }
 }
 
+/// Todo:
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstrumentKind {
@@ -137,11 +140,13 @@ impl<S> From<S> for Symbol where S: Into<String> {
 }
 
 impl Symbol {
+    /// Todo:
     pub fn new<S>(input: S) -> Self where S: Into<Symbol> {
         input.into()
     }
 }
 
+/// Todo:
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Sequence(pub u64);
 

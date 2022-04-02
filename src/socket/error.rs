@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Todo:
 #[derive(Debug, Error)]
 pub enum SocketError {
     #[error("error subscribing to resources over the socket: {0}")]
