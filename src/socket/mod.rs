@@ -4,19 +4,23 @@ pub mod error;
 
 use crate::socket::{
     error::SocketError,
-    protocol::ProtocolParser
+    protocol::ProtocolParser,
 };
-use std::marker::PhantomData;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    collections::VecDeque,
+    task::{Context, Poll},
+    pin::Pin,
+    marker::PhantomData
+};
+use futures::{Sink, Stream};
 use serde::de::DeserializeOwned;
 use pin_project::pin_project;
-use futures::{Sink, Stream};
+
 
 pub trait Transformer<Output> {
     type Input: DeserializeOwned;
-    type OutputIter: IntoIterator<Item = Output>;
-    fn transform(&mut self, input: Self::Input) -> Result<Self::OutputIter, SocketError>;
+    type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
+    fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
 
 #[pin_project]
@@ -31,58 +35,54 @@ where
     pub socket: Socket,
     pub parser: StreamParser,
     pub transformer: StreamTransformer,
+    pub buffer: VecDeque<Result<Output, SocketError>>,
     pub socket_item_marker: PhantomData<SocketItem>,
     pub exchange_message_marker: PhantomData<ExchangeMessage>,
-    pub output_marker: PhantomData<Output>,
 }
 
 impl<Socket, SocketItem, StreamItem, StreamParser, StreamTransformer, ExchangeMessage, Output> Stream
     for ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
 where
-    Socket: Sink<SocketItem> + Stream<Item = StreamItem>,
+    Socket: Sink<SocketItem> + Stream<Item = StreamItem> + Unpin,
     StreamParser: ProtocolParser<ExchangeMessage, Input = StreamItem>,
     StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
 {
-    type Item = Result<StreamTransformer::OutputIter, SocketError>;
+    type Item = Result<Output, SocketError>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.project();
-
-        match this.socket.poll_next(cx) {
-            Poll::Ready(Some(input)) => {
-                // Parse ExchangeMessage from Socket Stream<Item = StreamItem> & transform to Output
-                match StreamParser::parse(input) {
-                    // If parser returns None it's a safe-to-skip message
-                    None => {
-                        Poll::Pending
-                    }
-                    Some(Ok(exchange_message)) => {
-                        // Transform: Result<Vec<MarketEvent>, SocketError>
-                        // eg/ Err(Unidentifiable Message)
-                        // eg/ Ok(None) for SubscriptionSuccess
-                        // eg/ Ok(Some(MarketEvent).into_iter())
-
-                        // alternative:
-                        // Transform: Option<Result<Vec<MarketEvent>, SocketError>>
-
-                        // alternative:
-                        // Iterator<Result<MarketEvent, SocketError>>
-
-                        //  '--> Wrapped in Option<TransformResult>
-                        Poll::Ready(Some(this.transformer.transform(exchange_message)))
-                    },
-                    Some(Err(err)) => {
-                        Poll::Ready(Some(Err(err)))
-                    }
-                }
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            // Flush Self::Item buffer if it is not currently empty
+            if let Some(output) = self.buffer.pop_front() {
+                return Poll::Ready(Some(output))
             }
-            Poll::Ready(None) => {
-                Poll::Ready(None)
-            }
-            Poll::Pending => {
-                Poll::Pending
-            }
+
+            // Poll underlying `Stream` for next `StreamItem` input
+            let input = match self.as_mut().project().socket.poll_next(cx) {
+                Poll::Ready(Some(input)) => input,
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => return Poll::Pending,
+            };
+
+            // Parse input `StreamItem` into `ExchangeMessage`
+            let exchange_message = match StreamParser::parse(input) {
+                // `ProtocolParser` successfully deserialised `ExchangeMessage`
+                Some(Ok(exchange_message)) => exchange_message,
+
+                // If `ProtocolParser` returns an Err pass it downstream
+                Some(Err(err)) => return Poll::Ready(Some(Err(err))),
+
+                // If `ProtocolParser` returns None it's a safe-to-skip message
+                None => return Poll::Pending,
+            };
+
+            // Transform `ExchangeMessage` into `Transformer::OutputIter`
+            // ie/ IntoIterator<Item = Result<Output, SocketError>>
+            self.transformer
+                .transform(exchange_message)
+                .into_iter()
+                .for_each(|output| self.buffer.push_back(output));
+
         }
     }
 }
@@ -127,9 +127,9 @@ where
             socket,
             parser,
             transformer,
+            buffer: VecDeque::with_capacity(6),
             socket_item_marker: PhantomData::default(),
             exchange_message_marker: PhantomData::default(),
-            output_marker: PhantomData::default()
         }
     }
 }
