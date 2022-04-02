@@ -1,4 +1,14 @@
+#![warn(
+    missing_debug_implementations,
+    missing_copy_implementations,
+    rust_2018_idioms,
+    // missing_docs
+)]
+
+///! # Barter-Integration
+
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::{Deref, DerefMut};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Todo:
@@ -132,59 +142,43 @@ impl Symbol {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::fmt::Debug;
-    use tracing::info;
-    use crate::public::{ExchangeId, MarketStream};
-    use crate::public::binance::futures::{BinanceFuturesStream};
-    use crate::public::model::{MarketEvent, StreamKind, Subscription};
-    use crate::socket::error::SocketError;
-    use super::*;
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+pub struct Sequence(pub u64);
 
-    // Todo: Add subscription validation - it currently fails silently
-    // Todo: Maybe OutputIter will become an Option<OutputIter>?
-    // Todo: Add proper error enum for BinanceMessage in Barter-Data
-    //     '--> eg/ enum BinanceMessage { Error, BinancePayload }
-    // Todo: Do I want to keep the name trait Exchange? Do I like the generic ExTransformer, etc.
+impl Display for Sequence {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
-    #[tokio::test]
-    async fn stream_builder_works() -> Result<(), Box<dyn std::error::Error>> {
+impl Debug for Sequence {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
-        let streams = Streams::builder()
-            .subscribe(ExchangeId::BinanceFutures, [
-                ("btc", "usdt", InstrumentKind::Future, StreamKind::Trades),
-                ("eth", "usdt", InstrumentKind::Future, StreamKind::Trades),
-            ])
-            // .subscribe(ExchangeId::Binance, [
-            //     ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            //     ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            // ])
-            // .subscribe(ExchangeId::Ftx, [
-            //     ("btc", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            //     ("eth", "usdt", InstrumentKind::Spot, StreamKind::Trades),
-            // ])
-            .init()
-            .await?;
+impl AsRef<u64> for Sequence {
+    fn as_ref(&self) -> &u64 {
+        &self.0
+    }
+}
 
-        // Select individual exchange streams
-        // let mut futures_stream = streams
-        //     .select(ExchangeId::BinanceFutures)
-        //     .ok_or(SocketError::Unidentifiable("".to_owned()))?; // Todo
+impl Deref for Sequence {
+    type Target = u64;
 
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-        // let mut ftx_stream = streams
-        //     .select(ExchangeId::Ftx)
-        //     .ok_or(SocketError::Unidentifiable("".to_owned()))?; // Todo:
+impl DerefMut for Sequence {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-        // Join the remaining exchange streams into one
-        let mut joined_stream = streams.join().await;
-
-        while let Some(event) = joined_stream.recv().await {
-            println!("{:?}", event);
-        }
-
-
-        Ok(())
+impl<'de> Deserialize<'de> for Sequence {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        u64::deserialize(deserializer).map(Sequence)
     }
 }

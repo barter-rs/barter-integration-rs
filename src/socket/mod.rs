@@ -15,12 +15,15 @@ use pin_project::pin_project;
 pub mod protocol;
 pub mod error;
 
+/// Todo:
 pub trait Transformer<Output> {
     type Input: DeserializeOwned;
     type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
 
+/// Todo:
+#[derive(Debug)]
 #[pin_project]
 pub struct ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
 where

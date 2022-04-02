@@ -79,7 +79,7 @@ pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Option<Result<ExchangeMes
 }
 
 /// Basic process for a WebSocket CloseFrame message. Logs the payload at `trace` level.
-pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame>) -> Option<Result<ExchangeMessage, SocketError>> {
+pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame<'_>>) -> Option<Result<ExchangeMessage, SocketError>> {
     let close_frame = format!("{:?}", close_frame);
     debug!(payload = &*close_frame, "received CloseFrame WebSocket message");
     Some(Err(SocketError::Terminated(close_frame)))
