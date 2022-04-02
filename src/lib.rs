@@ -3,7 +3,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 /// Todo:
 pub mod socket;
-pub mod public;
 pub mod util;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -11,6 +10,12 @@ pub struct Instrument {
     pub base: Symbol,
     pub quote: Symbol,
     pub kind: InstrumentKind,
+}
+
+impl Display for Instrument {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", format!("({}_{}, {}", self.base, self.quote, self.kind))
+    }
 }
 
 impl<S> From<(S, S, InstrumentKind)> for Instrument
@@ -40,9 +45,10 @@ impl Instrument {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstrumentKind {
     Spot,
-    Future,
+    Future(FutureKind),
 }
 
 impl Default for InstrumentKind {
@@ -53,10 +59,40 @@ impl Default for InstrumentKind {
 
 impl Display for InstrumentKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{:?}", match self {
+            InstrumentKind::Spot => "Spot".to_owned(),
+            InstrumentKind::Future(kind) => format!("Future::{}", kind)
+        })
     }
 }
 
+/// Defines the type of a `Future`. If the `Future` has metadata relating to it's expiry, this is
+/// included.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum FutureKind {
+    Perpetual,
+    Expiry,
+}
+
+impl Default for FutureKind {
+    fn default() -> Self {
+        Self::Perpetual
+    }
+}
+
+impl Display for FutureKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            FutureKind::Perpetual => "Perpetual",
+            FutureKind::Expiry => "Expiry",
+        })
+    }
+}
+
+/// Barter new type representing a currency symbol `String` identifier.
+///
+/// eg/ "btc", "eth", "usdt", etc
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Symbol(pub String);
 
@@ -99,11 +135,9 @@ impl Symbol {
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
-    use futures::StreamExt;
     use tracing::info;
     use crate::public::{ExchangeId, MarketStream};
-    use crate::public::binance::futures::{BinanceFuturesItem, BinanceFuturesStream};
-    use crate::public::explore::{StreamBuilder, Streams};
+    use crate::public::binance::futures::{BinanceFuturesStream};
     use crate::public::model::{MarketEvent, StreamKind, Subscription};
     use crate::socket::error::SocketError;
     use super::*;

@@ -10,20 +10,17 @@ edition = "2021"
 tracing = "0.1.29"
 
 # Async
-tokio = { version = "1.14.0", features = ["full"] }
-tokio-stream = { version = "0.1.7", features = ["sync"] }
+tokio = { version = "1.17.0", features = ["net", "sync", "macros", "rt-multi-thread"] }
 tokio-tungstenite = { version = "0.15.0", features = ["rustls-tls"] }
-futures = "0.3.19"
+futures = "0.3.21"
 async-trait = "0.1.52"
 pin-project = "1.0.10"
-
-# Error
-thiserror = "1.0.30"
 
 # SerDe
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.68"
 
 # Misc
+thiserror = "1.0.30"
 chrono = {version = "0.4.19", features = ["serde"]}
 rust_decimal = "1.22.0"

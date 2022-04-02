@@ -1,7 +1,3 @@
-
-pub mod protocol;
-pub mod error;
-
 use crate::socket::{
     error::SocketError,
     protocol::ProtocolParser,
@@ -16,6 +12,8 @@ use futures::{Sink, Stream};
 use serde::de::DeserializeOwned;
 use pin_project::pin_project;
 
+pub mod protocol;
+pub mod error;
 
 pub trait Transformer<Output> {
     type Input: DeserializeOwned;

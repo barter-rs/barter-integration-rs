@@ -1,4 +1,5 @@
 use crate::socket::{SocketError, protocol::ProtocolParser, ExchangeSocket};
+use std::fmt::Debug;
 use tokio_tungstenite::{
     connect_async, MaybeTlsStream,
     tungstenite::{
@@ -6,7 +7,6 @@ use tokio_tungstenite::{
         protocol::CloseFrame
     }
 };
-use std::fmt::Debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
