@@ -15,7 +15,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub mod socket;
 pub mod util;
 
-/// Todo:
+/// Barter representation of an `Instrument`. Used to uniquely identify a `base_quote` pair, and it's
+/// associated instrument type.
+///
+/// eg/ Instrument { base: "btc", quote: "usdt", kind: Spot }
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Instrument {
     pub base: Symbol,
@@ -43,7 +46,7 @@ where
 }
 
 impl Instrument {
-    /// Todo:
+    /// Constructs a new [`Instrument`] using the provided configuration.
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
     where
         S: Into<Symbol>
@@ -54,14 +57,20 @@ impl Instrument {
             kind,
         }
     }
+
+    /// Generates a unique identifier for an [`Instrument`] being traded on the provided exchange.
+    pub fn to_id(&self, exchange: &str) -> InstrumentId {
+        InstrumentId::new(self, exchange)
+    }
 }
 
-/// Todo:
+/// Defines the type of [`Instrument`] which is being traded on a given `base_quote` market.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum InstrumentKind {
     Spot,
-    Future(FutureKind),
+    FuturePerpetual,
+    FutureQuarterly,
 }
 
 impl Default for InstrumentKind {
@@ -72,33 +81,10 @@ impl Default for InstrumentKind {
 
 impl Display for InstrumentKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", match self {
-            InstrumentKind::Spot => "Spot".to_owned(),
-            InstrumentKind::Future(kind) => format!("Future::{}", kind)
-        })
-    }
-}
-
-/// Defines the type of a `Future`. If the `Future` has metadata relating to it's expiry, this is
-/// included.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum FutureKind {
-    Perpetual,
-    Expiry,
-}
-
-impl Default for FutureKind {
-    fn default() -> Self {
-        Self::Perpetual
-    }
-}
-
-impl Display for FutureKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            FutureKind::Perpetual => "Perpetual",
-            FutureKind::Expiry => "Expiry",
+            InstrumentKind::Spot => "spot",
+            InstrumentKind::FuturePerpetual => "future_perpetual",
+            InstrumentKind::FutureQuarterly => "future_quarterly",
         })
     }
 }
@@ -107,7 +93,7 @@ impl Display for FutureKind {
 ///
 /// eg/ "btc", "eth", "usdt", etc
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
-pub struct Symbol(pub String);
+pub struct Symbol(String);
 
 impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -135,18 +121,19 @@ impl<'de> Deserialize<'de> for Symbol {
 
 impl<S> From<S> for Symbol where S: Into<String> {
     fn from(input: S) -> Self {
-        Self(input.into().to_lowercase())
+        Symbol::new(input)
     }
 }
 
 impl Symbol {
-    /// Todo:
-    pub fn new<S>(input: S) -> Self where S: Into<Symbol> {
-        input.into()
+    /// Construct a new [`Symbol`] new type using the provided `Into<Symbol>` value.
+    pub fn new<S>(input: S) -> Self where S: Into<String> {
+        Self(input.into().to_lowercase())
     }
 }
 
-/// Todo:
+/// Barter new type representing a monotonically increasing `u64` sequence number. Used for tracking
+/// the order of received messages via an [`ExchangeSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Sequence(pub u64);
 
