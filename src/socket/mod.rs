@@ -14,8 +14,11 @@ use pin_project::pin_project;
 
 pub mod protocol;
 pub mod error;
+/// `ProtocolParser`s are capable of parsing the input messages from a given protocol (eg WebSocket,
+/// Financial Information eXchange, etc) and deserialising into an `Output`.
 
-/// Todo:
+/// `Transformer`s are capable of transforming any `Input` into an iterator of
+/// `Result<Output, SocketError`s.
 pub trait Transformer<Output> {
     type Input: DeserializeOwned;
     type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
