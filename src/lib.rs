@@ -132,6 +132,42 @@ impl Symbol {
     }
 }
 
+/// Barter new type representing a unique `String` identifier for an [`Instrument`] being traded
+/// on the provided exchange.
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+pub struct InstrumentId(String);
+
+impl Debug for InstrumentId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Display for InstrumentId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for InstrumentId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for InstrumentId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        String::deserialize(deserializer).map(InstrumentId)
+    }
+}
+
+impl InstrumentId {
+    /// Construct a unique `String` identifier for an [`Instrument`].
+    pub fn new(instrument: &Instrument, exchange: &str) -> Self {
+        Self(format!("{}_{}_{}_{}", exchange, instrument.base, instrument.quote, instrument.kind).to_lowercase())
+    }
+}
+
 /// Barter new type representing a monotonically increasing `u64` sequence number. Used for tracking
 /// the order of received messages via an [`ExchangeSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
