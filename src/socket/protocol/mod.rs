@@ -5,7 +5,8 @@ use serde::de::DeserializeOwned;
 
 pub mod websocket;
 
-/// Todo:
+/// `ProtocolParser`s are capable of parsing the input messages from a given protocol (eg WebSocket,
+/// Financial Information eXchange, etc) and deserialising into an `Output`.
 pub trait ProtocolParser<Output>
 where
     Output: DeserializeOwned,
