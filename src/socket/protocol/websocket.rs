@@ -25,7 +25,7 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 pub type ExchangeWebSocket<Exchange, ExMessage, Output> = ExchangeSocket<
     WebSocket, WsMessage, WebSocketParser, Exchange, ExMessage, Output>;
 
-/// Todo:
+/// Default [`ProtocolParser`] implementation for a [`WebSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct WebSocketParser;
 
