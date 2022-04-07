@@ -99,19 +99,19 @@ where
     type Error = SocketError;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().socket.poll_ready(cx).map_err(|_| SocketError::SinkError)
+        self.project().socket.poll_ready(cx).map_err(|_| SocketError::Sink)
     }
 
     fn start_send(self: Pin<&mut Self>, item: SocketItem) -> Result<(), Self::Error> {
-        self.project().socket.start_send(item).map_err(|_| SocketError::SinkError)
+        self.project().socket.start_send(item).map_err(|_| SocketError::Sink)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().socket.poll_flush(cx).map_err(|_| SocketError::SinkError)
+        self.project().socket.poll_flush(cx).map_err(|_| SocketError::Sink)
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().socket.poll_close(cx).map_err(|_| SocketError::SinkError)
+        self.project().socket.poll_close(cx).map_err(|_| SocketError::Sink)
     }
 }
 

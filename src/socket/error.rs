@@ -1,23 +1,23 @@
 use thiserror::Error;
 
-/// Todo:
+/// All integration related errors generated in `barter-integration`.
 #[derive(Debug, Error)]
 pub enum SocketError {
     #[error("error subscribing to resources over the socket: {0}")]
-    SubscribeError(String),
+    Subscribe(String),
 
-    #[error("ExchangeSocket terminated with closing frame: {0}")]
-    Terminated(String),
+    #[error("Sink error")]
+    Sink,
 
     #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(String),
 
+    #[error("SerDe JSON error: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("ExchangeSocket terminated with closing frame: {0}")]
+    Terminated(String),
+
     #[error("WebSocket error: {0}")]
-    WebSocketError(#[from] tokio_tungstenite::tungstenite::Error),
-
-    #[error("JSON SerDe error: {0}")]
-    SerdeJsonError(#[from] serde_json::Error),
-
-    #[error("Sink error")]
-    SinkError,
+    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
 }

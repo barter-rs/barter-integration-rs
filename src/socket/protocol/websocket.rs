@@ -44,7 +44,7 @@ where
                 WsMessage::Pong(pong) => process_pong(pong),
                 WsMessage::Close(close_frame) => process_close_frame(close_frame),
             },
-            Err(ws_err) => Some(Err(SocketError::WebSocketError(ws_err)))
+            Err(ws_err) => Some(Err(SocketError::WebSocket(ws_err)))
         }
     }
 }
@@ -62,7 +62,7 @@ where
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::SerdeJsonError(err)
+            SocketError::Serde(err)
         })
     )
 }
@@ -95,5 +95,5 @@ where
     connect_async(request)
         .await
         .and_then(|(websocket, _)| Ok(websocket))
-        .map_err(SocketError::WebSocketError)
+        .map_err(SocketError::WebSocket)
 }
