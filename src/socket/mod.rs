@@ -41,11 +41,11 @@ where
     pub exchange_message_marker: PhantomData<ExchangeMessage>,
 }
 
-impl<Socket, SocketItem, StreamItem, StreamParser, StreamTransformer, ExchangeMessage, Output> Stream
-    for ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
+impl<Socket, SocketItem, StreamItem, Protocol, StreamTransformer, ExchangeMessage, Output> Stream
+    for ExchangeSocket<Socket, SocketItem, Protocol, StreamTransformer, ExchangeMessage, Output>
 where
     Socket: Sink<SocketItem> + Stream<Item = StreamItem> + Unpin,
-    StreamParser: ProtocolParser<ExchangeMessage, Input = StreamItem>,
+    Protocol: ProtocolParser<ExchangeMessage, Input = StreamItem>,
     StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
 {
@@ -66,7 +66,7 @@ where
             };
 
             // Parse input `StreamItem` into `ExchangeMessage`
-            let exchange_message = match StreamParser::parse(input) {
+            let exchange_message = match Protocol::parse(input) {
                 // `ProtocolParser` successfully deserialised `ExchangeMessage`
                 Some(Ok(exchange_message)) => exchange_message,
 
