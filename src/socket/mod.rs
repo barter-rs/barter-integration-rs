@@ -39,9 +39,9 @@ where
     pub socket: Socket,
     pub parser: StreamParser,
     pub transformer: StreamTransformer,
-    pub buffer: VecDeque<Result<Output, SocketError>>,
-    pub socket_item_marker: PhantomData<SocketItem>,
-    pub exchange_message_marker: PhantomData<ExchangeMessage>,
+    buffer: VecDeque<Result<Output, SocketError>>,
+    socket_item_marker: PhantomData<SocketItem>,
+    exchange_message_marker: PhantomData<ExchangeMessage>,
 }
 
 impl<Socket, SocketItem, StreamItem, Protocol, StreamTransformer, ExchangeMessage, Output> Stream
