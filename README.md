@@ -137,7 +137,7 @@ In addition to the Barter-Integration crate, the Barter project also maintains:
 * [`Barter`]: High-performance, extensible & modular trading components with batteries-included. Contains a
   pre-built trading Engine that can serve as a live-trading or backtesting system.
 * [`Barter-Data`]: A high-performance WebSocket integration library for streaming public data from leading 
-  cryptocurrency exchanges - batteries included. It is:
+  cryptocurrency exchanges.
 * [`Barter-Execution`]: Financial exchange integrations for trade execution - yet to be released!
 
 ## Roadmap
