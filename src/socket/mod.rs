@@ -22,7 +22,7 @@ pub mod error;
 /// `Transformer`s are capable of transforming any `Input` into an iterator of
 /// `Result<Output, SocketError>`s.
 pub trait Transformer<Output> {
-    type Input;
+    type Input: DeserializeOwned;
     type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
@@ -32,11 +32,10 @@ pub trait Transformer<Output> {
 /// desired output data structure.
 #[derive(Debug)]
 #[pin_project]
-pub struct ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
+pub struct ExchangeSocket<Protocol, Socket, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
     Socket: Sink<Protocol::Message> + Stream,
-    ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {
     #[pin]
@@ -44,16 +43,15 @@ where
     pub transformer: StreamTransformer,
     pub buffer: VecDeque<Result<Output, SocketError>>,
     pub protocol_marker: PhantomData<Protocol>,
-    pub exchange_message_marker: PhantomData<ExchangeMessage>,
 }
 
-impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Stream
-    for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
+impl<Protocol, Socket, StreamTransformer, ExchangeMessage, Output> Stream
+    for ExchangeSocket<Protocol, Socket, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
     Socket: Sink<Protocol::Message> + Stream<Item = Result<Protocol::Message, Protocol::Error>> + Unpin,
-    ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
+    ExchangeMessage: DeserializeOwned,
 {
     type Item = Result<Output, SocketError>;
 
@@ -93,12 +91,11 @@ where
     }
 }
 
-impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Sink<Protocol::Message>
-    for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
+impl<Protocol, Socket, StreamTransformer, Output> Sink<Protocol::Message>
+    for ExchangeSocket<Protocol, Socket, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
     Socket: Sink<Protocol::Message> + Stream,
-    ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {
     type Error = SocketError;
@@ -120,12 +117,11 @@ where
     }
 }
 
-impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
-    ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
+impl<Protocol, Socket, StreamTransformer, Output>
+    ExchangeSocket<Protocol, Socket, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
     Socket: Sink<Protocol::Message> + Stream,
-    ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {
     pub fn new(socket: Socket, transformer: StreamTransformer) -> Self {
@@ -134,7 +130,6 @@ where
             transformer,
             buffer: VecDeque::with_capacity(6),
             protocol_marker: PhantomData::default(),
-            exchange_message_marker: PhantomData::default(),
         }
     }
 }
