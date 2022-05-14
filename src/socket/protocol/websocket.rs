@@ -94,6 +94,6 @@ where
     debug!(request = &*format!("{:?}", request), "attempting to establish WebSocket connection");
     connect_async(request)
         .await
-        .and_then(|(websocket, _)| Ok(websocket))
+        .map(|(websocket, _)| websocket)
         .map_err(SocketError::WebSocket)
 }

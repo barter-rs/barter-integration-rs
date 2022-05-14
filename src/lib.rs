@@ -28,7 +28,7 @@ pub struct Instrument {
 
 impl Display for Instrument {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("({}_{}, {}", self.base, self.quote, self.kind))
+        write!(f, "({}_{}, {}", self.base, self.quote, self.kind)
     }
 }
 
@@ -119,7 +119,10 @@ impl<'de> Deserialize<'de> for Symbol {
     }
 }
 
-impl<S> From<S> for Symbol where S: Into<String> {
+impl<S> From<S> for Symbol
+where
+    S: Into<String>
+{
     fn from(input: S) -> Self {
         Symbol::new(input)
     }
