@@ -177,7 +177,7 @@ impl InstrumentId {
 }
 
 /// Barter new type representing a monotonically increasing `u64` sequence number. Used for tracking
-/// the order of received messages via an [`ExchangeSocket`].
+/// the order of received messages via an `ExchangeSocket`.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Sequence(pub u64);
 
