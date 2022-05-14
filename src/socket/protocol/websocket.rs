@@ -31,13 +31,13 @@ pub type ExchangeWebSocket<Exchange, ExMessage, Output> = ExchangeSocket<
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct WebSocketParser;
 
-impl<ExchangeMessage> ProtocolParser<ExchangeMessage> for WebSocketParser
-where
-    ExchangeMessage: DeserializeOwned,
-{
+impl ProtocolParser for WebSocketParser {
     type ProtocolMessage = Result<WsMessage, WsError>;
 
-    fn parse(input: Self::ProtocolMessage) -> Option<Result<ExchangeMessage, SocketError>> {
+    fn parse<Output>(input: Self::ProtocolMessage) -> Option<Result<Output, SocketError>>
+    where
+        Output: DeserializeOwned,
+    {
         match input {
             Ok(ws_message) => match ws_message {
                 WsMessage::Text(text) => process_text(text),

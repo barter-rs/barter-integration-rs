@@ -20,9 +20,9 @@ pub mod protocol;
 pub mod error;
 
 /// `Transformer`s are capable of transforming any `Input` into an iterator of
-/// `Result<Output, SocketError`s.
+/// `Result<Output, SocketError>`s.
 pub trait Transformer<Output> {
-    type Input: DeserializeOwned;
+    type Input;
     type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
@@ -32,12 +32,12 @@ pub trait Transformer<Output> {
 /// desired output data structure.
 #[derive(Debug)]
 #[pin_project]
-pub struct ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
+pub struct ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
-    Protocol: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser,
     Socket: Sink<Protocol::ProtocolMessage> + Stream,
-    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
+    StreamTransformer: Transformer<Output>,
 {
     #[pin]
     pub socket: Socket,
@@ -47,13 +47,13 @@ where
     pub exchange_message_marker: PhantomData<ExchangeMessage>,
 }
 
-impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output> Stream
-    for ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
+impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Stream
+    for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
-    Protocol: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser,
     Socket: Sink<Protocol::ProtocolMessage> + Stream<Item = Protocol::ProtocolMessage> + Unpin,
-    StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
+    StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
 {
     type Item = Result<Output, SocketError>;
 
@@ -72,7 +72,7 @@ where
             };
 
             // Parse input `StreamItem` into `ExchangeMessage`
-            let exchange_message = match Protocol::parse(input) {
+            let exchange_message = match Protocol::parse::<ExchangeMessage>(input) {
                 // `ProtocolParser` successfully deserialised `ExchangeMessage`
                 Some(Ok(exchange_message)) => exchange_message,
 
@@ -93,13 +93,13 @@ where
     }
 }
 
-impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output> Sink<Protocol::ProtocolMessage>
-    for ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
+impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Sink<Protocol::ProtocolMessage>
+    for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
-    Protocol: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser,
     Socket: Sink<Protocol::ProtocolMessage> + Stream,
-    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
+    StreamTransformer: Transformer<Output>,
 {
     type Error = SocketError;
 
@@ -120,13 +120,13 @@ where
     }
 }
 
-impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
-    ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
+impl<Socket, Protocol, ExchangeMessage, StreamTransformer, Output>
+    ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
-    Protocol: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser,
     Socket: Sink<Protocol::ProtocolMessage> + Stream,
-    StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
+    StreamTransformer: Transformer<Output>,
 {
     pub fn new(socket: Socket, transformer: StreamTransformer) -> Self {
         Self {
