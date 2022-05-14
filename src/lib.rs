@@ -2,17 +2,21 @@
     missing_debug_implementations,
     missing_copy_implementations,
     rust_2018_idioms,
-    // missing_docs
 )]
 
 ///! # Barter-Integration
 
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt::{Debug, Display, Formatter},
+    ops::{Deref, DerefMut},
+};
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// Todo:
+/// Contains an `ExchangeSocket` capable of acting as a `Stream` and `Sink` for a given remote
+/// server.
 pub mod socket;
+
+/// Utilities to assist with Barter integrations.
 pub mod util;
 
 /// Barter representation of an `Instrument`. Used to uniquely identify a `base_quote` pair, and it's
@@ -23,12 +27,13 @@ pub mod util;
 pub struct Instrument {
     pub base: Symbol,
     pub quote: Symbol,
+    #[serde(alias = "instrument_type")]
     pub kind: InstrumentKind,
 }
 
 impl Display for Instrument {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("({}_{}, {}", self.base, self.quote, self.kind))
+        write!(f, "({}_{}, {}", self.base, self.quote, self.kind)
     }
 }
 
@@ -119,7 +124,10 @@ impl<'de> Deserialize<'de> for Symbol {
     }
 }
 
-impl<S> From<S> for Symbol where S: Into<String> {
+impl<S> From<S> for Symbol
+where
+    S: Into<String>
+{
     fn from(input: S) -> Self {
         Symbol::new(input)
     }
@@ -169,7 +177,7 @@ impl InstrumentId {
 }
 
 /// Barter new type representing a monotonically increasing `u64` sequence number. Used for tracking
-/// the order of received messages via an [`ExchangeSocket`].
+/// the order of received messages via an `ExchangeSocket`.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Sequence(pub u64);
 

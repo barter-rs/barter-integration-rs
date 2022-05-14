@@ -1,5 +1,9 @@
 use crate::socket::{SocketError, protocol::ProtocolParser, ExchangeSocket};
 use std::fmt::Debug;
+use serde::{
+    {Deserialize, Serialize},
+    de::DeserializeOwned
+};
 use tokio_tungstenite::{
     connect_async, MaybeTlsStream,
     tungstenite::{
@@ -7,8 +11,6 @@ use tokio_tungstenite::{
         protocol::CloseFrame
     }
 };
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tracing::{debug, trace, warn};
 
@@ -23,23 +25,23 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 
 /// Convenient type alias for an [`ExchangeSocket`] utilising a tungstenite [`WebSocket`].
 pub type ExchangeWebSocket<Exchange, ExMessage, Output> = ExchangeSocket<
-    WebSocket, WsMessage, WebSocketParser, Exchange, ExMessage, Output>;
+    WebSocketParser, WebSocket, Exchange, ExMessage, Output>;
 
 /// Default [`ProtocolParser`] implementation for a [`WebSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct WebSocketParser;
 
-impl<ExchangeMessage> ProtocolParser<ExchangeMessage> for WebSocketParser
-where
-    ExchangeMessage: DeserializeOwned,
-{
-    type Input = Result<WsMessage, WsError>;
+impl ProtocolParser for WebSocketParser {
+    type ProtocolMessage = Result<WsMessage, WsError>;
 
-    fn parse(input: Self::Input) -> Option<Result<ExchangeMessage, SocketError>> {
+    fn parse<Output>(input: Self::ProtocolMessage) -> Option<Result<Output, SocketError>>
+    where
+        Output: DeserializeOwned,
+    {
         match input {
             Ok(ws_message) => match ws_message {
-                WsMessage::Text(text) => process_payload(text.into_bytes()),
-                WsMessage::Binary(binary) => process_payload(binary),
+                WsMessage::Text(text) => process_text(text),
+                WsMessage::Binary(binary) => process_binary(binary),
                 WsMessage::Ping(ping) => process_ping(ping),
                 WsMessage::Pong(pong) => process_pong(pong),
                 WsMessage::Close(close_frame) => process_close_frame(close_frame),
@@ -49,51 +51,73 @@ where
     }
 }
 
-/// Process a payload of bytes by deserialising into an `ExchangeMessage`.
-pub fn process_payload<ExchangeMessage>(payload: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>>
+/// Process a payload of `String` by deserialising into an `ExchangeMessage`.
+pub fn process_text<ExchangeMessage>(payload: String) -> Option<Result<ExchangeMessage, SocketError>>
+where
+    ExchangeMessage: DeserializeOwned,
+{
+    Some(serde_json::from_str::<ExchangeMessage>(&payload)
+        .map_err(|error| {
+            warn!(
+                ?error,
+                ?payload,
+                action = "returning Some(Err(err))",
+                "failed to deserialize WebSocket Message into domain specific Message"
+            );
+            SocketError::Serde { error, payload }
+        })
+    )
+}
+
+/// Process a payload of `Vec<u8>` bytes by deserialising into an `ExchangeMessage`.
+pub fn process_binary<ExchangeMessage>(payload: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>>
 where
     ExchangeMessage: DeserializeOwned,
 {
     Some(serde_json::from_slice::<ExchangeMessage>(&payload)
-        .map_err(|err| {
+        .map_err(|error| {
             warn!(
-                error = &*format!("{:?}", err),
-                payload = &*format!("{:?}", payload),
+                ?error,
+                ?payload,
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::Serde(err)
+            SocketError::Serde {
+                error,
+                payload: String::from_utf8(payload)
+                    .unwrap_or_else(|x| x.to_string())
+            }
         })
     )
 }
 
 /// Basic process for a WebSocket ping message. Logs the payload at `trace` level.
 pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>> {
-    trace!(payload = &*format!("{:?}", ping), "received Ping WebSocket message");
+    trace!(payload = ?ping, "received Ping WebSocket message");
     None
 }
 
 /// Basic process for a WebSocket pong message. Logs the payload at `trace` level.
 pub fn process_pong<ExchangeMessage>(pong: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>> {
-    trace!(payload = &*format!("{:?}", pong), "received Pong WebSocket message");
+    trace!(payload = ?pong, "received Pong WebSocket message");
     None
 }
 
 /// Basic process for a WebSocket CloseFrame message. Logs the payload at `trace` level.
 pub fn process_close_frame<ExchangeMessage>(close_frame: Option<CloseFrame<'_>>) -> Option<Result<ExchangeMessage, SocketError>> {
     let close_frame = format!("{:?}", close_frame);
-    debug!(payload = &*close_frame, "received CloseFrame WebSocket message");
+    debug!(payload = %close_frame, "received CloseFrame WebSocket message");
     Some(Err(SocketError::Terminated(close_frame)))
 }
 
-/// Connect asynchronously to [`WebSocket`] server.
+/// Connect asynchronously to a [`WebSocket`] server.
 pub async fn connect<R>(request: R) -> Result<WebSocket, SocketError>
 where
     R: IntoClientRequest + Unpin + Debug
 {
-    debug!(request = &*format!("{:?}", request), "attempting to establish WebSocket connection");
+    debug!(?request, "attempting to establish WebSocket connection");
     connect_async(request)
         .await
-        .and_then(|(websocket, _)| Ok(websocket))
+        .map(|(websocket, _)| websocket)
         .map_err(SocketError::WebSocket)
 }

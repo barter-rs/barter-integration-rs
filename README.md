@@ -102,11 +102,9 @@ async fn main() {
     let transformer = StatefulTransformer { sum_of_volume: Decimal::ZERO };
 
     // ExchangeWebSocket includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
-    let mut websocket = ExchangeWebSocket::new(
-        binance_conn, WebSocketParser, transformer
-    );
+    let mut websocket = ExchangeWebSocket::new(binance_conn, transformer);
 
-    // Send something over the socket (eg/ Binance trades subscriptoin)
+    // Send something over the socket (eg/ Binance trades subscription)
     websocket
         .send(WsMessage::Text(
             json!({"method": "SUBSCRIBE","params": ["btcusdt@aggTrade"],"id": 1}).to_string()
