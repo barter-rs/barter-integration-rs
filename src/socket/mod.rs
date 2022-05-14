@@ -23,7 +23,9 @@ pub trait Transformer<Output> {
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
 
-/// Todo:
+/// An `ExchangeSocket` is capable of acting as both a `Stream` and a `Sink` with any communication
+/// protocol. It streams exchange messages from the inner socket and transform them into the
+/// desired output data structure.
 #[derive(Debug)]
 #[pin_project]
 pub struct ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
