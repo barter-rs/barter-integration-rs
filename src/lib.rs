@@ -16,9 +16,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 /// server.
 pub mod socket;
 
-/// Utilities to assist with Barter integrations.
-pub mod util;
-
 /// Barter representation of an `Instrument`. Used to uniquely identify a `base_quote` pair, and it's
 /// associated instrument type.
 ///
