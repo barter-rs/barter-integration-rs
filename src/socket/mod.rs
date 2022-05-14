@@ -8,14 +8,12 @@ use std::{
     pin::Pin,
     marker::PhantomData
 };
-use futures::{Sink, Stream};
 use serde::de::DeserializeOwned;
+use futures::{Sink, Stream};
 use pin_project::pin_project;
 
 pub mod protocol;
 pub mod error;
-/// `ProtocolParser`s are capable of parsing the input messages from a given protocol (eg WebSocket,
-/// Financial Information eXchange, etc) and deserialising into an `Output`.
 
 /// `Transformer`s are capable of transforming any `Input` into an iterator of
 /// `Result<Output, SocketError`s.
@@ -28,27 +26,26 @@ pub trait Transformer<Output> {
 /// Todo:
 #[derive(Debug)]
 #[pin_project]
-pub struct ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
+pub struct ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
 where
-    Socket: Sink<SocketItem> + Stream,
-    StreamParser: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser<ExchangeMessage>,
+    Socket: Sink<Protocol::ProtocolMessage> + Stream,
     StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
     #[pin]
     pub socket: Socket,
-    pub parser: StreamParser,
     pub transformer: StreamTransformer,
     pub buffer: VecDeque<Result<Output, SocketError>>,
-    pub socket_item_marker: PhantomData<SocketItem>,
+    pub protocol_marker: PhantomData<Protocol>,
     pub exchange_message_marker: PhantomData<ExchangeMessage>,
 }
 
-impl<Socket, SocketItem, StreamItem, Protocol, StreamTransformer, ExchangeMessage, Output> Stream
-    for ExchangeSocket<Socket, SocketItem, Protocol, StreamTransformer, ExchangeMessage, Output>
+impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output> Stream
+    for ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
 where
-    Socket: Sink<SocketItem> + Stream<Item = StreamItem> + Unpin,
-    Protocol: ProtocolParser<ExchangeMessage, Input = StreamItem>,
+    Protocol: ProtocolParser<ExchangeMessage>,
+    Socket: Sink<Protocol::ProtocolMessage> + Stream<Item = Protocol::ProtocolMessage> + Unpin,
     StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
 {
@@ -86,16 +83,15 @@ where
                 .transform(exchange_message)
                 .into_iter()
                 .for_each(|output| self.buffer.push_back(output));
-
         }
     }
 }
 
-impl<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output> Sink<SocketItem>
-    for ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
+impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output> Sink<Protocol::ProtocolMessage>
+    for ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
 where
-    Socket: Sink<SocketItem> + Stream,
-    StreamParser: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser<ExchangeMessage>,
+    Socket: Sink<Protocol::ProtocolMessage> + Stream,
     StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
@@ -105,7 +101,7 @@ where
         self.project().socket.poll_ready(cx).map_err(|_| SocketError::Sink)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: SocketItem) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: Protocol::ProtocolMessage) -> Result<(), Self::Error> {
         self.project().socket.start_send(item).map_err(|_| SocketError::Sink)
     }
 
@@ -118,21 +114,20 @@ where
     }
 }
 
-impl<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
-    ExchangeSocket<Socket, SocketItem, StreamParser, StreamTransformer, ExchangeMessage, Output>
+impl<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
+    ExchangeSocket<Socket, Protocol, StreamTransformer, ExchangeMessage, Output>
 where
-    Socket: Sink<SocketItem> + Stream,
-    StreamParser: ProtocolParser<ExchangeMessage>,
+    Protocol: ProtocolParser<ExchangeMessage>,
+    Socket: Sink<Protocol::ProtocolMessage> + Stream,
     StreamTransformer: Transformer<Output>,
     ExchangeMessage: DeserializeOwned,
 {
-    pub fn new(socket: Socket, parser: StreamParser, transformer: StreamTransformer) -> Self {
+    pub fn new(socket: Socket, transformer: StreamTransformer) -> Self {
         Self {
             socket,
-            parser,
             transformer,
             buffer: VecDeque::with_capacity(6),
-            socket_item_marker: PhantomData::default(),
+            protocol_marker: PhantomData::default(),
             exchange_message_marker: PhantomData::default(),
         }
     }

@@ -7,8 +7,10 @@
 
 ///! # Barter-Integration
 
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt::{Debug, Display, Formatter},
+    ops::{Deref, DerefMut},
+};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Todo:
@@ -23,6 +25,7 @@ pub mod util;
 pub struct Instrument {
     pub base: Symbol,
     pub quote: Symbol,
+    #[serde(alias = "instrument_type")]
     pub kind: InstrumentKind,
 }
 

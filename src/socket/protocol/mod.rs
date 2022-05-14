@@ -11,6 +11,6 @@ pub trait ProtocolParser<Output>
 where
     Output: DeserializeOwned,
 {
-    type Input;
-    fn parse(input: Self::Input) -> Option<Result<Output, SocketError>>;
+    type ProtocolMessage;
+    fn parse(input: Self::ProtocolMessage) -> Option<Result<Output, SocketError>>;
 }
