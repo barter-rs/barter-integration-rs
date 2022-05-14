@@ -28,7 +28,7 @@ pub trait Transformer<Output> {
 }
 
 /// An `ExchangeSocket` is capable of acting as both a `Stream` and a `Sink` with any communication
-/// protocol. It streams exchange messages from the inner socket and transform them into the
+/// protocol. It streams exchange messages from the inner socket and transforms them into the
 /// desired output data structure.
 #[derive(Debug)]
 #[pin_project]
