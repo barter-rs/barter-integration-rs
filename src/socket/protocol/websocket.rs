@@ -25,7 +25,7 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 
 /// Convenient type alias for an [`ExchangeSocket`] utilising a tungstenite [`WebSocket`].
 pub type ExchangeWebSocket<Exchange, ExMessage, Output> = ExchangeSocket<
-    WebSocket, WebSocketParser, Exchange, ExMessage, Output>;
+    WebSocketParser, WebSocket, Exchange, ExMessage, Output>;
 
 /// Default [`ProtocolParser`] implementation for a [`WebSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

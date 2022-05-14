@@ -120,7 +120,7 @@ where
     }
 }
 
-impl<Socket, Protocol, ExchangeMessage, StreamTransformer, Output>
+impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
     ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
