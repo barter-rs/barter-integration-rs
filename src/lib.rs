@@ -12,8 +12,11 @@ use std::{
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// Todo:
+/// Contains an `ExchangeSocket` capable of acting as a `Stream` and `Sink` for a given remote
+/// server.
 pub mod socket;
+
+/// Utilities to assist with Barter integrations.
 pub mod util;
 
 /// Barter representation of an `Instrument`. Used to uniquely identify a `base_quote` pair, and it's
