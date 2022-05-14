@@ -1,6 +1,6 @@
 [package]
 name = "barter-integration"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["keirbailey <keirinvestment@gmail.com>"]
 edition = "2021"
 license = "MIT"
