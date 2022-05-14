@@ -1,4 +1,4 @@
-use crate::socket::{SocketError, protocol::ProtocolParser, ExchangeSocket};
+use crate::socket::{SocketError, protocol::ProtocolParser};
 use std::fmt::Debug;
 use serde::{
     {Deserialize, Serialize},
@@ -22,10 +22,6 @@ pub type WsMessage = tokio_tungstenite::tungstenite::Message;
 
 /// Communicative type alias for a tungstenite [`WebSocket`] `Error`.
 pub type WsError = tokio_tungstenite::tungstenite::Error;
-
-/// Convenient type alias for an [`ExchangeSocket`] utilising a tungstenite [`WebSocket`].
-pub type ExchangeWebSocket<Exchange, ExMessage, Output> = ExchangeSocket<
-    WebSocketParser, WebSocket, Exchange, ExMessage, Output>;
 
 /// Default [`ProtocolParser`] implementation for a [`WebSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
