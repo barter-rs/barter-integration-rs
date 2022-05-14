@@ -35,7 +35,7 @@ pub trait Transformer<Output> {
 pub struct ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
-    Socket: Sink<Protocol::ProtocolMessage> + Stream,
+    Socket: Sink<Protocol::Message> + Stream,
     ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {
@@ -51,7 +51,7 @@ impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Stream
     for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
-    Socket: Sink<Protocol::ProtocolMessage> + Stream<Item = Protocol::ProtocolMessage> + Unpin,
+    Socket: Sink<Protocol::Message> + Stream<Item = Result<Protocol::Message, Protocol::Error>> + Unpin,
     ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
 {
@@ -93,11 +93,11 @@ where
     }
 }
 
-impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Sink<Protocol::ProtocolMessage>
+impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output> Sink<Protocol::Message>
     for ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
-    Socket: Sink<Protocol::ProtocolMessage> + Stream,
+    Socket: Sink<Protocol::Message> + Stream,
     ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {
@@ -107,7 +107,7 @@ where
         self.project().socket.poll_ready(cx).map_err(|_| SocketError::Sink)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: Protocol::ProtocolMessage) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: Protocol::Message) -> Result<(), Self::Error> {
         self.project().socket.start_send(item).map_err(|_| SocketError::Sink)
     }
 
@@ -124,7 +124,7 @@ impl<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
     ExchangeSocket<Protocol, Socket, ExchangeMessage, StreamTransformer, Output>
 where
     Protocol: ProtocolParser,
-    Socket: Sink<Protocol::ProtocolMessage> + Stream,
+    Socket: Sink<Protocol::Message> + Stream,
     ExchangeMessage: DeserializeOwned,
     StreamTransformer: Transformer<Output>,
 {

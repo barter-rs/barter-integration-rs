@@ -28,9 +28,10 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 pub struct WebSocketParser;
 
 impl ProtocolParser for WebSocketParser {
-    type ProtocolMessage = Result<WsMessage, WsError>;
+    type Message = WsMessage;
+    type Error = WsError;
 
-    fn parse<Output>(input: Self::ProtocolMessage) -> Option<Result<Output, SocketError>>
+    fn parse<Output>(input: Result<Self::Message, Self::Error>) -> Option<Result<Output, SocketError>>
     where
         Output: DeserializeOwned,
     {
