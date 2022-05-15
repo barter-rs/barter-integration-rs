@@ -86,7 +86,9 @@ where
             self.transformer
                 .transform(exchange_message)
                 .into_iter()
-                .for_each(|output| self.buffer.push_back(output));
+                .for_each(|output| {
+                    self.buffer.push_back(output)
+                });
         }
     }
 }
