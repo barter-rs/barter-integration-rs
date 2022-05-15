@@ -28,7 +28,7 @@ pub mod socket;
 pub struct Instrument {
     pub base: Symbol,
     pub quote: Symbol,
-    #[serde(alias = "instrument_type")]
+    #[serde(rename = "instrument_type")]
     pub kind: InstrumentKind,
 }
 
@@ -179,7 +179,9 @@ impl InstrumentId {
 /// [`Instrument`].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct Subscription {
+    #[serde(flatten)]
     pub instrument: Instrument,
+    #[serde(alias = "type")]
     pub kind: StreamKind,
 }
 
@@ -234,7 +236,7 @@ impl Subscription {
 
 /// Possible Barter-Data Stream types a [`Subscription`] is associated with.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(untagged, rename_all = "snake_case")]
 pub enum StreamKind {
     Trade,
     Candle(Interval),
