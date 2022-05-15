@@ -90,7 +90,10 @@ where
                 Some(Ok(exchange_message)) => exchange_message,
 
                 // If `ProtocolParser` returns an Err pass it downstream
-                Some(Err(err)) => return Poll::Ready(Some(Err(err))),
+                Some(Err(err)) => {
+                    println!("{:?}", err);
+                    return Poll::Ready(Some(Err(err)))
+                },
 
                 // If `ProtocolParser` returns None it's a safe-to-skip message
                 None => return Poll::Pending,

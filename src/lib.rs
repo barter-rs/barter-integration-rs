@@ -76,7 +76,6 @@ impl Instrument {
 pub enum InstrumentKind {
     Spot,
     FuturePerpetual,
-    FutureQuarterly,
 }
 
 impl Default for InstrumentKind {
@@ -90,7 +89,6 @@ impl Display for InstrumentKind {
         write!(f, "{}", match self {
             InstrumentKind::Spot => "spot",
             InstrumentKind::FuturePerpetual => "future_perpetual",
-            InstrumentKind::FutureQuarterly => "future_quarterly",
         })
     }
 }
