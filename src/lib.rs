@@ -236,7 +236,7 @@ impl Subscription {
 
 /// Possible Barter-Data Stream types a [`Subscription`] is associated with.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-#[serde(untagged, rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum StreamKind {
     Trade,
     Candle(Interval),
@@ -254,7 +254,6 @@ impl Display for StreamKind {
             StreamKind::OrderBookDelta => "order_book_delta".to_owned(),
             StreamKind::OrderBook => "order_book".to_owned()
         })
-
     }
 }
 
@@ -384,5 +383,63 @@ where
 {
     fn from(input: S) -> Self {
         Self(input.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde::de::Error;
+    use super::*;
+    use serde_json::Error as SerdeError;
+
+    #[test]
+    fn test_deserialise_subscription() {
+        struct TestCase {
+            input: &'static str,
+            expected: Result<Subscription, SerdeError>,
+        }
+        
+        let cases = vec![
+            TestCase { // Test case 0: valid Spot Trade
+                input: r#"{
+                            "kind": "trade",
+                            "base": "btc",
+                            "quote": "usdt",
+                            "instrument_type": "future_perpetual"
+                        }"#,
+                expected: Ok(Subscription {
+                    instrument: ("btc", "usdt", InstrumentKind::FuturePerpetual).into(),
+                    kind: StreamKind::Trade
+                })
+            },
+            TestCase { // Test case 1: valid FuturePerpetual Trade w/ "type" as alias
+                input: r#"{
+                            "type": "trade",
+                            "base": "btc",
+                            "quote": "usdt",
+                            "instrument_type": "spot"
+                        }"#,
+                expected: Ok(Subscription {
+                    instrument: ("btc", "usdt", InstrumentKind::Spot).into(),
+                    kind: StreamKind::Trade
+                })
+            },
+            TestCase { // Test case 2: invalid Trade w/ invalid instrument_type
+                input: r#"{
+                            "type": "trade",
+                            "b": "btc",
+                            "q": "usdt",
+                            "instrument_type": "unknown"
+                        }"#,
+                expected: Err(serde_json::error::Error::custom(""))
+            }
+        ];
+
+        for (index, test) in cases.into_iter().enumerate() {
+            match serde_json::from_str::<Subscription>(test.input) {
+                Ok(actual) => assert_eq!(actual, test.expected.unwrap(), "TestCase {} failed", index),
+                Err(err) => assert!(test.expected.is_err(), "TestCase {} failed with err: {}", index, err)
+            }
+        }
     }
 }
