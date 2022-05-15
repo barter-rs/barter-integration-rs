@@ -1,5 +1,4 @@
 #![warn(
-    missing_debug_implementations,
     missing_copy_implementations,
     rust_2018_idioms,
 )]
@@ -13,7 +12,6 @@ use crate::socket::{
 use std::{
     collections::HashMap,
     fmt::{Debug, Display, Formatter},
-    ops::{Deref, DerefMut},
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -385,48 +383,5 @@ where
 {
     fn from(input: S) -> Self {
         Self(input.into())
-    }
-}
-
-/// Barter new type representing a monotonically increasing `u64` sequence number. Used for tracking
-/// the order of received messages via an `ExchangeSocket`.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
-pub struct Sequence(pub u64);
-
-impl Display for Sequence {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Debug for Sequence {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl AsRef<u64> for Sequence {
-    fn as_ref(&self) -> &u64 {
-        &self.0
-    }
-}
-
-impl Deref for Sequence {
-    type Target = u64;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Sequence {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for Sequence {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        u64::deserialize(deserializer).map(Sequence)
     }
 }
