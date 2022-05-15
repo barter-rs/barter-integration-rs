@@ -236,21 +236,21 @@ impl Subscription {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamKind {
-    Trades,
-    Candles(Interval),
-    Klines(Interval),
-    OrderBookDeltas,
-    OrderBooks,
+    Trade,
+    Candle(Interval),
+    Kline(Interval),
+    OrderBookDelta,
+    OrderBook,
 }
 
 impl Display for StreamKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            StreamKind::Trades => "trades".to_owned(),
-            StreamKind::Candles(interval) => format!("candles_{}", interval),
-            StreamKind::Klines(interval) => format!("klines_{}", interval),
-            StreamKind::OrderBookDeltas => "order_book_deltas".to_owned(),
-            StreamKind::OrderBooks => "order_books".to_owned()
+            StreamKind::Trade => "trade".to_owned(),
+            StreamKind::Candle(interval) => format!("candle_{}", interval),
+            StreamKind::Kline(interval) => format!("kline_{}", interval),
+            StreamKind::OrderBookDelta => "order_book_delta".to_owned(),
+            StreamKind::OrderBook => "order_book".to_owned()
         })
 
     }
