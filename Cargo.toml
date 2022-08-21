@@ -1,6 +1,6 @@
 [package]
 name = "barter-integration"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["keirbailey <keirinvestment@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -18,15 +18,18 @@ categories = ["accessibility", "simulation"]
 tracing = "0.1.29"
 
 # Async
-tokio = { version = "1.17.0", features = ["net", "sync", "macros", "rt-multi-thread"] }
-tokio-tungstenite = { version = "0.15.0", features = ["rustls-tls"] }
+tokio = { version = "1.20.1", features = ["net", "sync", "macros", "rt-multi-thread"] }
+tokio-tungstenite = { version = "0.17.2", features = ["rustls-tls-webpki-roots"] }
 futures = "0.3.21"
-async-trait = "0.1.52"
-pin-project = "1.0.10"
+async-trait = "0.1.57"
+pin-project = "1.0.11"
+
+# Error
+thiserror = "1.0.32"
 
 # SerDe
-serde = { version = "1.0.130", features = ["derive"] }
-serde_json = "1.0.68"
+serde = { version = "1.0.143", features = ["derive"] }
+serde_json = "1.0.83"
 
 # Misc
-thiserror = "1.0.30"
+chrono = "0.4.21"
