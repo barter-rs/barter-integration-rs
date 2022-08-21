@@ -1,5 +1,5 @@
+use crate::model::SubscriptionId;
 use thiserror::Error;
-use crate::SubscriptionId;
 
 /// All integration related errors generated in `barter-integration`.
 #[derive(Debug, Error)]
@@ -22,9 +22,9 @@ pub enum SocketError {
     #[error("{entity} does not support: {item}")]
     Unsupported { entity: &'static str, item: String },
 
-    #[error("consumed unidentifiable message: {0}")]
-    Unidentifiable(SubscriptionId),
-
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
+
+    #[error("consumed unidentifiable message: {0}")]
+    Unidentifiable(SubscriptionId),
 }
