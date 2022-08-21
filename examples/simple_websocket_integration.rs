@@ -1,18 +1,19 @@
-use barter_integration::socket::{
-    ExchangeSocket, Transformer,
+use barter_integration::{
     error::SocketError,
-    protocol::websocket::{WebSocketParser, WebSocket, WsMessage}
+    protocol::websocket::{WebSocket, WebSocketParser, WsMessage},
+    ExchangeSocket, Transformer,
 };
-use std::str::FromStr;
+use futures::{SinkExt, StreamExt};
 use serde::{de, Deserialize};
 use serde_json::json;
-use futures::{SinkExt, StreamExt};
+use std::str::FromStr;
 use tokio_tungstenite::connect_async;
+use tracing::debug;
 
 // Convenient type alias for an `ExchangeSocket` utilising a tungstenite `WebSocket`
 type ExchangeWebSocket<Exchange> = ExchangeSocket<WebSocketParser, WebSocket, Exchange, VolumeSum>;
 
-// Communicative type alias for what the Transformer is generating
+// Communicative type alias for what the VolumeSum the Transformer is generating
 type VolumeSum = f64;
 
 #[derive(Deserialize)]
@@ -39,13 +40,14 @@ impl Transformer<VolumeSum> for StatefulTransformer {
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter {
         // Add new input Trade quantity to sum
         match input {
-            BinanceMessage::SubResponse { .. } => {
+            BinanceMessage::SubResponse { result, id } => {
+                debug!("Received SubResponse for {}: {:?}", id, result);
                 // Don't care about this for the example
-            },
+            }
             BinanceMessage::Trade { quantity, .. } => {
                 // Add new Trade volume to internal state VolumeSum
                 self.sum_of_volume += quantity;
-            },
+            }
         };
 
         // Return IntoIterator of length 1 containing the running sum of volume
@@ -72,19 +74,18 @@ async fn main() {
     // Send something over the socket (eg/ Binance trades subscription)
     websocket
         .send(WsMessage::Text(
-            json!({"method": "SUBSCRIBE","params": ["btcusdt@aggTrade"],"id": 1}).to_string()
+            json!({"method": "SUBSCRIBE","params": ["btcusdt@aggTrade"],"id": 1}).to_string(),
         ))
         .await
         .expect("failed to send WsMessage over socket");
 
     // Receive a stream of your desired OutputData model from the socket
     while let Some(volume_result) = websocket.next().await {
-
         match volume_result {
             Ok(cumulative_volume) => {
                 // Do something with your data
                 println!("{cumulative_volume:?}");
-            },
+            }
             Err(error) => {
                 // React to any errors produced by the internal transformation
                 eprintln!("{error}")
