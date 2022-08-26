@@ -1,7 +1,7 @@
 use barter_integration::{
     error::SocketError,
     protocol::websocket::{WebSocket, WebSocketParser, WsMessage},
-    ExchangeSocket, Transformer,
+    ExchangeStream, Transformer,
 };
 use futures::{SinkExt, StreamExt};
 use serde::{de, Deserialize};
@@ -10,8 +10,8 @@ use std::str::FromStr;
 use tokio_tungstenite::connect_async;
 use tracing::debug;
 
-// Convenient type alias for an `ExchangeSocket` utilising a tungstenite `WebSocket`
-type ExchangeWebSocket<Exchange> = ExchangeSocket<WebSocketParser, WebSocket, Exchange, VolumeSum>;
+// Convenient type alias for an `ExchangeStream` utilising a tungstenite `WebSocket`
+type ExchangeWsStream<Exchange> = ExchangeStream<WebSocketParser, WebSocket, Exchange, VolumeSum>;
 
 // Communicative type alias for what the VolumeSum the Transformer is generating
 type VolumeSum = f64;
@@ -60,27 +60,27 @@ impl Transformer<VolumeSum> for StatefulTransformer {
 #[tokio::main]
 async fn main() {
     // Establish Sink/Stream communication with desired WebSocket server
-    let binance_conn = connect_async("wss://fstream.binance.com/ws/")
+    let mut binance_conn = connect_async("wss://fstream.binance.com/ws/")
         .await
         .map(|(ws_conn, _)| ws_conn)
         .expect("failed to connect");
 
-    // Instantiate some arbitrary Transformer to apply to data parsed from the WebSocket protocol
-    let transformer = StatefulTransformer { sum_of_volume: 0.0 };
-
-    // ExchangeWebSocket includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
-    let mut websocket = ExchangeWebSocket::new(binance_conn, transformer);
-
     // Send something over the socket (eg/ Binance trades subscription)
-    websocket
+    binance_conn
         .send(WsMessage::Text(
             json!({"method": "SUBSCRIBE","params": ["btcusdt@aggTrade"],"id": 1}).to_string(),
         ))
         .await
         .expect("failed to send WsMessage over socket");
 
-    // Receive a stream of your desired OutputData model from the socket
-    while let Some(volume_result) = websocket.next().await {
+    // Instantiate some arbitrary Transformer to apply to data parsed from the WebSocket protocol
+    let transformer = StatefulTransformer { sum_of_volume: 0.0 };
+
+    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
+    let mut ws_stream = ExchangeWsStream::new(binance_conn, transformer);
+
+    // Receive a stream of your desired Output data model from the ExchangeStream
+    while let Some(volume_result) = ws_stream.next().await {
         match volume_result {
             Ok(cumulative_volume) => {
                 // Do something with your data
@@ -94,7 +94,7 @@ async fn main() {
     }
 }
 
-/// Deserialize a string as the desired type
+/// Deserialize a `String` as the desired type.
 fn de_str<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: de::Deserializer<'de>,

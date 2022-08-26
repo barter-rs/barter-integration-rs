@@ -9,6 +9,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{
         client::IntoClientRequest,
+        error::ProtocolError,
         protocol::{frame::Frame, CloseFrame},
     },
     MaybeTlsStream,
@@ -17,6 +18,12 @@ use tracing::{debug, trace, warn};
 
 /// Convenient type alias for a tungstenite `WebSocketStream`.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+/// Convenient type alias for the `Sink` half of a tungstenite [`WebSocket`].
+pub type WsSink = futures::stream::SplitSink<WebSocket, WsMessage>;
+
+/// Convenient type alias for the `Stream` half of a tungstenite [`WebSocket`].
+pub type WsStream = futures::stream::SplitStream<WebSocket>;
 
 /// Communicative type alias for a tungstenite [`WebSocket`] `Message`.
 pub type WsMessage = tokio_tungstenite::tungstenite::Message;
@@ -139,4 +146,15 @@ where
         .await
         .map(|(websocket, _)| websocket)
         .map_err(SocketError::WebSocket)
+}
+
+/// Determine whether a [`WsError`] indicates the [`WebSocket`] has disconnected.
+pub fn is_websocket_disconnected(error: &WsError) -> bool {
+    matches!(
+        error,
+        WsError::ConnectionClosed
+            | WsError::AlreadyClosed
+            | WsError::Io(_)
+            | WsError::Protocol(ProtocolError::SendAfterClosing)
+    )
 }
