@@ -297,9 +297,9 @@ where
 /// [`Side`] of a trade - Buy or Sell.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Side {
-    #[serde(alias = "buy", alias = "BUY")]
+    #[serde(alias = "buy", alias = "BUY", alias = "b")]
     Buy,
-    #[serde(alias = "sell", alias = "SELL")]
+    #[serde(alias = "sell", alias = "SELL", alias = "s")]
     Sell,
 }
 
