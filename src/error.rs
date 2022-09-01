@@ -27,4 +27,7 @@ pub enum SocketError {
 
     #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(SubscriptionId),
+
+    #[error("consumed error message from exchange: {0}")]
+    Exchange(String),
 }
