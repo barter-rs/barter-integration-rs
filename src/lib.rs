@@ -34,6 +34,15 @@ pub mod error;
 /// messages into a generic output data structure.
 pub mod protocol;
 
+/// [`Validator`]s are capable of determining if their internal state is satisfactory to fulfill
+/// some use case defined by the implementor.
+pub trait Validator {
+    /// Check if `Self` is valid for some use case.
+    fn validate(self) -> Result<Self, SocketError>
+    where
+        Self: Sized;
+}
+
 /// [`Transformer`]s are capable of transforming any `Input` into an iterator of
 /// `Result<Output, SocketError>`s.
 pub trait Transformer<Output> {
