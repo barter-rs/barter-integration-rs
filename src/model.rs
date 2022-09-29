@@ -294,7 +294,7 @@ where
     }
 }
 
-/// [`Side`] of a trade - Buy or Sell.
+/// [`Side`] of a trade or position - Buy or Sell.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Side {
     #[serde(alias = "buy", alias = "BUY", alias = "b")]
