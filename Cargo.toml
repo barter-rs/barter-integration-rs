@@ -1,11 +1,11 @@
 [package]
 name = "barter-integration"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["keirbailey <keirinvestment@gmail.com>"]
 edition = "2021"
 license = "MIT"
 documentation = "https://docs.rs/barter-integration/"
-repository = "https://gitlab.com/open-source-keir/financial-modelling/trading/barter-integration-rs"
+repository = "https://github.com/barter-rs/barter-integration-rs"
 readme = "README.md"
 description = "Low-level framework for composing flexible web integrations, especially with financial exchanges"
 keywords = ["trading", "backtesting", "crypto", "stocks", "investment"]
