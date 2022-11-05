@@ -1,5 +1,5 @@
-use reqwest::Error;
 use crate::model::SubscriptionId;
+use reqwest::Error;
 use thiserror::Error;
 
 /// All socket IO related errors generated in `barter-integration`.

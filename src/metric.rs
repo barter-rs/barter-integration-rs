@@ -27,7 +27,7 @@ pub struct Field {
     pub value: Value,
 }
 
-#[derive(Debug, Clone, PartialOrd, PartialEq, Deserialize, Serialize,)]
+#[derive(Debug, Clone, PartialOrd, PartialEq, Deserialize, Serialize)]
 pub enum Value {
     Float(f64),
     Int(i64),
@@ -37,8 +37,8 @@ pub enum Value {
 }
 
 impl<S> From<(&'static str, S)> for Tag
-    where
-        S: Into<String>
+where
+    S: Into<String>,
 {
     fn from((key, value): (&'static str, S)) -> Self {
         Self::new(key, value)
@@ -47,16 +47,19 @@ impl<S> From<(&'static str, S)> for Tag
 
 impl Tag {
     pub fn new<S>(key: &'static str, value: S) -> Self
-        where
-            S: Into<String>
+    where
+        S: Into<String>,
     {
-        Self { key, value: value.into() }
+        Self {
+            key,
+            value: value.into(),
+        }
     }
 }
 
 impl<S> From<(&'static str, S)> for Field
-    where
-        S: Into<Value>
+where
+    S: Into<Value>,
 {
     fn from((key, value): (&'static str, S)) -> Self {
         Self::new(key, value)
@@ -65,10 +68,13 @@ impl<S> From<(&'static str, S)> for Field
 
 impl Field {
     pub fn new<S>(key: &'static str, value: S) -> Self
-        where
-            S: Into<Value>
+    where
+        S: Into<Value>,
     {
-        Self { key, value: value.into() }
+        Self {
+            key,
+            value: value.into(),
+        }
     }
 }
 

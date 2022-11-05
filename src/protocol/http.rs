@@ -1,14 +1,12 @@
-use std::time::Duration;
 use crate::{
-    error::{SocketError, ExchangeError},
-    metric::{Metric, Field, Tag},
+    error::{ExchangeError, SocketError},
+    metric::{Field, Metric, Tag},
 };
 use async_trait::async_trait;
 use chrono::Utc;
 use reqwest::RequestBuilder;
-use serde::{
-    de::DeserializeOwned, Serialize
-};
+use serde::{de::DeserializeOwned, Serialize};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tracing::{error, warn};
@@ -27,7 +25,7 @@ where
 
     fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
     where
-        S: Into<String>
+        S: Into<String>,
     {
         // Generate Url String
         let mut url = base_url.into() + Self::path();
@@ -43,9 +41,15 @@ where
     }
 
     fn path() -> &'static str;
-    fn query_params(&self) -> Option<&QueryParams> { None }
-    fn body(&self) -> Option<&Body> { None }
-    fn timeout() -> Duration { DEFAULT_HTTP_REQUEST_TIMEOUT }
+    fn query_params(&self) -> Option<&QueryParams> {
+        None
+    }
+    fn body(&self) -> Option<&Body> {
+        None
+    }
+    fn timeout() -> Duration {
+        DEFAULT_HTTP_REQUEST_TIMEOUT
+    }
 }
 
 #[async_trait]
@@ -56,7 +60,7 @@ pub trait HttpClient {
 
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
     where
-        Request: HttpRequest + Send
+        Request: HttpRequest + Send,
     {
         // Use provided Request to construct a reqwest::RequestBuilder
         let builder = self.builder(&request)?;
@@ -68,8 +72,7 @@ pub trait HttpClient {
         let response = self.measured_execution::<Request>(request).await?;
 
         // Attempt to parse API Success or Error response
-        self.parse::<Request::Response>(response)
-            .await
+        self.parse::<Request::Response>(response).await
     }
 
     fn builder<Request>(&self, request: &Request) -> Result<RequestBuilder, SocketError>
@@ -93,13 +96,20 @@ pub trait HttpClient {
         Ok(builder)
     }
 
-    fn sign<Request>(&self, request: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError>
+    fn sign<Request>(
+        &self,
+        request: &Request,
+        builder: RequestBuilder,
+    ) -> Result<reqwest::Request, SocketError>
     where
         Request: HttpRequest;
 
-    async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<reqwest::Response, SocketError>
+    async fn measured_execution<Request>(
+        &self,
+        request: reqwest::Request,
+    ) -> Result<reqwest::Response, SocketError>
     where
-        Request: HttpRequest
+        Request: HttpRequest,
     {
         // Measure the HTTP request round trip duration
         let start = std::time::Instant::now();
@@ -116,11 +126,14 @@ pub trait HttpClient {
                 Tag::new("status_code", response.status().as_str()),
                 Tag::new("base_url", self.base_url()),
             ],
-            fields: vec![Field::new("duration", duration)]
+            fields: vec![Field::new("duration", duration)],
         };
 
         if self.metric_tx().send(http_duration).is_err() {
-            warn!(why = "Metric channel receiver dropped", "failed to send Metric");
+            warn!(
+                why = "Metric channel receiver dropped",
+                "failed to send Metric"
+            );
         }
 
         println!("Request Time: {duration:?}");
@@ -130,7 +143,7 @@ pub trait HttpClient {
 
     async fn parse<Response>(&self, response: reqwest::Response) -> Result<Response, SocketError>
     where
-        Response: DeserializeOwned
+        Response: DeserializeOwned,
     {
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();
@@ -159,9 +172,13 @@ pub trait HttpClient {
 
         Err(SocketError::DeserialiseBinary {
             error: parse_ok_error,
-            payload: data.to_vec()
+            payload: data.to_vec(),
         })
     }
 
-    fn parse_error(&self, status_code: StatusCode, data: &[u8]) -> Result<ExchangeError, SocketError>;
+    fn parse_error(
+        &self,
+        status_code: StatusCode,
+        data: &[u8],
+    ) -> Result<ExchangeError, SocketError>;
 }
