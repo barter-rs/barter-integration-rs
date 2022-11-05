@@ -74,7 +74,7 @@ where
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::Serde { error, payload }
+            SocketError::Deserialise { error, payload }
         }),
     )
 }
@@ -94,7 +94,7 @@ where
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::Serde {
+            SocketError::Deserialise {
                 error,
                 payload: String::from_utf8(payload).unwrap_or_else(|x| x.to_string()),
             }
