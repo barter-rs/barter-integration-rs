@@ -1,3 +1,4 @@
+use reqwest::Error;
 use crate::model::SubscriptionId;
 use thiserror::Error;
 
@@ -41,7 +42,10 @@ pub enum SocketError {
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
 
     #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(reqwest::Error),
+
+    #[error("HTTP request timed out")]
+    HttpTimeout(reqwest::Error),
 
     #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(SubscriptionId),
@@ -85,4 +89,13 @@ pub enum ExchangeError {
 
     #[error("balance is insufficient")]
     BalanceInsufficient,
+}
+
+impl From<reqwest::Error> for SocketError {
+    fn from(error: Error) -> Self {
+        match error {
+            error if error.is_timeout() => SocketError::HttpTimeout(error),
+            error => SocketError::Http(error),
+        }
+    }
 }

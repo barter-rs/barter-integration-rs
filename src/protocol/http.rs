@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::{
     error::{SocketError, ExchangeError},
     metric::{Metric, Field, Tag},
@@ -11,6 +12,8 @@ use serde::{
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tracing::{error, warn};
+
+const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub trait HttpRequest<QueryParams = (), Body = ()>
 where
@@ -42,12 +45,13 @@ where
     fn path() -> &'static str;
     fn query_params(&self) -> Option<&QueryParams> { None }
     fn body(&self) -> Option<&Body> { None }
+    fn timeout() -> Duration { DEFAULT_HTTP_REQUEST_TIMEOUT }
 }
 
 #[async_trait]
 pub trait HttpClient {
-    fn client(&self) -> reqwest::Client;
-    fn metric_tx(&self) -> mpsc::UnboundedSender<Metric>;
+    fn client(&self) -> &reqwest::Client;
+    fn metric_tx(&self) -> &mpsc::UnboundedSender<Metric>;
     fn base_url(&self) -> &str;
 
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
@@ -78,7 +82,8 @@ pub trait HttpClient {
         // Construct RequestBuilder with method & url
         let mut builder = self
             .client()
-            .request(Request::method(), url);
+            .request(Request::method(), url)
+            .timeout(Request::timeout());
 
         // Add optional request Body
         if let Some(body) = request.body() {
@@ -88,16 +93,9 @@ pub trait HttpClient {
         Ok(builder)
     }
 
-    fn sign<Request>(&self, _request: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError>
+    fn sign<Request>(&self, request: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError>
     where
-        Request: HttpRequest
-    {
-        // Default implementation does not sign the request
-        // eg/ for public data http request
-        builder
-            .build()
-            .map_err(SocketError::from)
-    }
+        Request: HttpRequest;
 
     async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<reqwest::Response, SocketError>
     where
@@ -114,7 +112,7 @@ pub trait HttpClient {
             time: Utc::now().timestamp_millis() as u64,
             tags: vec![
                 Request::metric_tag(),
-                Tag::new("method", Request::method().as_str()),
+                Tag::new("http_method", Request::method().as_str()),
                 Tag::new("status_code", response.status().as_str()),
                 Tag::new("base_url", self.base_url()),
             ],
