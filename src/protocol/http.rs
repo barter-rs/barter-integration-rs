@@ -1,20 +1,16 @@
-use crate::{error::{SocketError, ExchangeError}};
-use std::time::Duration;
+use crate::{
+    error::{SocketError, ExchangeError},
+    metric::{Metric, Field, Tag},
+};
 use async_trait::async_trait;
+use chrono::Utc;
 use reqwest::RequestBuilder;
 use serde::{
     de::DeserializeOwned, Serialize
 };
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::http::StatusCode;
-use tracing::error;
-
-#[derive(Debug)]
-pub struct Metric<T> {
-    name: &'static str,
-    tag: &'static str,
-    value: T,
-}
+use tracing::{error, warn};
 
 pub trait HttpRequest<QueryParams = (), Body = ()>
 where
@@ -23,7 +19,7 @@ where
 {
     type Response: DeserializeOwned;
 
-    fn metric_tag() -> &'static str;
+    fn metric_tag() -> Tag;
     fn method() -> reqwest::Method;
 
     fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
@@ -51,7 +47,7 @@ where
 #[async_trait]
 pub trait HttpClient {
     fn client(&self) -> reqwest::Client;
-    fn metric_tx(&self) -> mpsc::UnboundedSender<Metric<Duration>>;
+    fn metric_tx(&self) -> mpsc::UnboundedSender<Metric>;
     fn base_url(&self) -> &str;
 
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
@@ -107,19 +103,29 @@ pub trait HttpClient {
     where
         Request: HttpRequest
     {
+        // Measure the HTTP request round trip duration
         let start = std::time::Instant::now();
         let response = self.client().execute(request).await?;
-        let took = start.elapsed();
+        let duration = start.elapsed().as_millis() as u64;
 
-        self.metric_tx()
-            .send(Metric {
-                name: "http_request_duration",
-                tag: Request::metric_tag(),
-                value: took
-            })
-            .unwrap();
+        // Construct HTTP request duration Metric & send
+        let http_duration = Metric {
+            name: "http_request_duration",
+            time: Utc::now().timestamp_millis() as u64,
+            tags: vec![
+                Request::metric_tag(),
+                Tag::new("method", Request::method().as_str()),
+                Tag::new("status_code", response.status().as_str()),
+                Tag::new("base_url", self.base_url()),
+            ],
+            fields: vec![Field::new("duration", duration)]
+        };
 
-        println!("Request Time: {took:?}");
+        if self.metric_tx().send(http_duration).is_err() {
+            warn!(why = "Metric channel receiver dropped", "failed to send Metric");
+        }
+
+        println!("Request Time: {duration:?}");
 
         Ok(response)
     }
