@@ -51,47 +51,7 @@ pub enum SocketError {
     Unidentifiable(SubscriptionId),
 
     #[error("consumed error message from exchange: {0}")]
-    Exchange(#[from] ExchangeError),
-}
-
-/// Normalised exchange API errors generated in `barter-integration`.
-#[derive(Debug, Clone, Error)]
-pub enum ExchangeError {
-    #[error("exchange is in maintenance mode")]
-    Maintenance,
-
-    #[error("request authorisation signature invalid")]
-    SignatureInvalid,
-
-    #[error("request nonce invalid")]
-    NonceInvalid,
-
-    #[error("rate limit exceeded")]
-    RateLimit,
-
-    #[error("order not found")]
-    OrderNotFound,
-
-    #[error("order already cancelled")]
-    OrderAlreadyCancelled,
-
-    #[error("order already filled")]
-    OrderAlreadyFilled,
-
-    #[error("order rejected")]
-    OrderRejected,
-
-    #[error("order quantity is too small")]
-    OrderQuantityInsufficient,
-
-    #[error("order price is too small")]
-    OrderPriceInsufficient,
-
-    #[error("balance is insufficient")]
-    BalanceInsufficient,
-
-    #[error("non-defined generic exchange error: {0}")]
-    Generic(String),
+    Exchange(String),
 }
 
 impl From<reqwest::Error> for SocketError {

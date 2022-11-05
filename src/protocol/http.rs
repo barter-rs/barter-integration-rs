@@ -1,5 +1,6 @@
+use std::fmt::Debug;
 use crate::{
-    error::{ExchangeError, SocketError},
+    error::SocketError,
     metric::{Field, Metric, Tag},
 };
 use async_trait::async_trait;
@@ -14,9 +15,12 @@ use tracing::{error, warn};
 /// Default Http [`reqwest::Request`] timeout Duration.
 const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-///
+/// Http client that executes [`HttpRequest`]s. Implement this when integrating APIs that require
+/// Http to interact with server resources.
 #[async_trait]
 pub trait HttpClient {
+    type Error: From<SocketError> + Debug;
+
     /// Reference to a reusable [`reqwest::Client`].
     fn client(&self) -> &reqwest::Client;
 
@@ -28,7 +32,7 @@ pub trait HttpClient {
     fn base_url(&self) -> &str;
 
     /// Execute the provided [`HttpRequest`].
-    async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
+    async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Self::Error>
     where
         Request: HttpRequest + Send,
     {
@@ -42,7 +46,8 @@ pub trait HttpClient {
         let response = self.measured_execution::<Request>(request).await?;
 
         // Attempt to parse API Success or Error response
-        self.parse::<Request::Response>(response).await
+        self.parse::<Request::Response>(response)
+            .await
     }
 
     /// Use the provided [`HttpRequest`] to construct a Http [`reqwest::RequestBuilder`].
@@ -160,13 +165,13 @@ pub trait HttpClient {
     }
 
     /// Attempt to parse the [`reqwest::Response`] into the associated [`HttpRequest::Response`].
-    async fn parse<Response>(&self, response: reqwest::Response) -> Result<Response, SocketError>
+    async fn parse<Response>(&self, response: reqwest::Response) -> Result<Response, Self::Error>
     where
         Response: DeserializeOwned,
     {
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();
-        let data = response.bytes().await?;
+        let data = response.bytes().await.map_err(SocketError::from)?;
 
         // Attempt to deserialize reqwest::Response Bytes into Ok(Response)
         let parse_ok_error = match serde_json::from_slice::<Response>(&data) {
@@ -176,7 +181,7 @@ pub trait HttpClient {
 
         // Attempt to deserialise API ExchangeError if Ok(Response) deserialisation failed
         let parse_error_error = match self.parse_error(status_code, &data) {
-            Ok(api_error) => return Err(SocketError::Exchange(api_error)),
+            Ok(api_error) => return Err(api_error),
             Err(serde_error) => serde_error,
         };
 
@@ -189,10 +194,10 @@ pub trait HttpClient {
             "error deserializing HTTP response"
         );
 
-        Err(SocketError::DeserialiseBinary {
+        Err(Self::Error::from(SocketError::DeserialiseBinary {
             error: parse_ok_error,
             payload: data.to_vec(),
-        })
+        }))
     }
 
     /// If [`parse`](Self::parse) fails, this function attempts to parse the normalised
@@ -201,15 +206,17 @@ pub trait HttpClient {
         &self,
         status_code: StatusCode,
         data: &[u8],
-    ) -> Result<ExchangeError, SocketError>;
+    ) -> Result<Self::Error, SocketError>;
 }
 
-///
-pub trait HttpRequest<QueryParams = (), Body = ()>
-where
-    QueryParams: Serialize,
-    Body: Serialize,
-{
+/// Http request that can be executed by a [`HttpClient`].
+pub trait HttpRequest {
+    /// Serialisable query parameters type - use unit struct () if not required for this request.
+    type QueryParams: Serialize;
+
+    /// Serialisable Body type - use unit struct () if not required for this request.
+    type Body: Serialize;
+
     /// Expected response type this request will be answered with if successful.
     type Response: DeserializeOwned;
 
@@ -241,12 +248,12 @@ where
     fn path() -> &'static str;
 
     /// Optional query parameters for this request.
-    fn query_params(&self) -> Option<&QueryParams> {
+    fn query_params(&self) -> Option<&Self::QueryParams> {
         None
     }
 
     /// Optional Body for this request.
-    fn body(&self) -> Option<&Body> {
+    fn body(&self) -> Option<&Self::Body> {
         None
     }
 
