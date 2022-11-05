@@ -1,16 +1,13 @@
+use crate::{error::{SocketError, ExchangeError}};
 use std::time::Duration;
 use async_trait::async_trait;
 use reqwest::RequestBuilder;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::DeserializeOwned, Serialize
+};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tracing::error;
-use crate::error::ExchangeError;
-use crate::SocketError;
-
-#[derive(Serialize)] struct FetchBalancesRequest;
-#[derive(Deserialize)] struct FetchBalancesResponse;
 
 #[derive(Debug)]
 pub struct Metric<T> {
@@ -19,7 +16,7 @@ pub struct Metric<T> {
     value: T,
 }
 
-trait ExchangeRequest<QueryParams = (), Body = ()>
+pub trait HttpRequest<QueryParams = (), Body = ()>
 where
     QueryParams: Serialize,
     Body: Serialize,
@@ -52,14 +49,14 @@ where
 }
 
 #[async_trait]
-trait HttpClient: {
+pub trait HttpClient {
     fn client(&self) -> reqwest::Client;
     fn metric_tx(&self) -> mpsc::UnboundedSender<Metric<Duration>>;
     fn base_url(&self) -> &str;
 
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
     where
-        Request: ExchangeRequest + Send
+        Request: HttpRequest + Send
     {
         // Use provided Request to construct a reqwest::RequestBuilder
         let builder = self.builder(&request)?;
@@ -77,7 +74,7 @@ trait HttpClient: {
 
     fn builder<Request>(&self, request: &Request) -> Result<RequestBuilder, SocketError>
     where
-        Request: ExchangeRequest,
+        Request: HttpRequest,
     {
         // Generate Url
         let url = request.url(self.base_url())?;
@@ -97,7 +94,7 @@ trait HttpClient: {
 
     fn sign<Request>(&self, _request: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError>
     where
-        Request: ExchangeRequest
+        Request: HttpRequest
     {
         // Default implementation does not sign the request
         // eg/ for public data http request
@@ -108,7 +105,7 @@ trait HttpClient: {
 
     async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<reqwest::Response, SocketError>
     where
-        Request: ExchangeRequest
+        Request: HttpRequest
     {
         let start = std::time::Instant::now();
         let response = self.client().execute(request).await?;
