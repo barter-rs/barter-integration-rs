@@ -1,17 +1,32 @@
 use crate::model::SubscriptionId;
 use thiserror::Error;
 
-/// All integration related errors generated in `barter-integration`.
+/// All socket IO related errors generated in `barter-integration`.
 #[derive(Debug, Error)]
 pub enum SocketError {
     #[error("Sink error")]
     Sink,
 
-    #[error("SerDe JSON error: {error} when deserialising payload: {payload}")]
-    Serde {
+    #[error("Deserialising JSON error: {error} for payload: {payload}")]
+    Deserialise {
         error: serde_json::Error,
         payload: String,
     },
+
+    #[error("Deserialising JSON error: {error} for binary payload: {payload:?}")]
+    DeserialiseBinary {
+        error: serde_json::Error,
+        payload: Vec<u8>,
+    },
+
+    #[error("Serialising JSON error: {0}")]
+    Serialise(serde_json::Error),
+
+    #[error("SerDe Query String serialisation error: {0}")]
+    QueryParams(#[from] serde_qs::Error),
+
+    #[error("error parsing Url: {0}")]
+    UrlParse(#[from] url::ParseError),
 
     #[error("error subscribing to resources over the socket: {0}")]
     Subscribe(String),
@@ -25,9 +40,49 @@ pub enum SocketError {
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
 
+    #[error("HTTP error: {0}")]
+    Http(#[from] reqwest::Error),
+
     #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(SubscriptionId),
 
     #[error("consumed error message from exchange: {0}")]
-    Exchange(String),
+    Exchange(#[from] ExchangeError),
+}
+
+/// Normalised exchange API errors generated in `barter-integration`.
+#[derive(Debug, Clone, Copy, Error)]
+pub enum ExchangeError {
+    #[error("exchange is in maintenance mode")]
+    Maintenance,
+
+    #[error("request authorisation signature invalid")]
+    SignatureInvalid,
+
+    #[error("request nonce invalid")]
+    NonceInvalid,
+
+    #[error("rate limit exceeded")]
+    RateLimit,
+
+    #[error("order not found")]
+    OrderNotFound,
+
+    #[error("order already cancelled")]
+    OrderAlreadyCancelled,
+
+    #[error("order already filled")]
+    OrderAlreadyFilled,
+
+    #[error("order rejected")]
+    OrderRejected,
+
+    #[error("order quantity is too small")]
+    OrderQuantityInsufficient,
+
+    #[error("order price is too small")]
+    OrderPriceInsufficient,
+
+    #[error("balance is insufficient")]
+    BalanceInsufficient,
 }
