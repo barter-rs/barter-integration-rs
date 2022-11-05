@@ -91,7 +91,7 @@ pub enum ExchangeError {
     BalanceInsufficient,
 
     #[error("non-defined generic exchange error: {0}")]
-    Generic(String)
+    Generic(String),
 }
 
 impl From<reqwest::Error> for SocketError {

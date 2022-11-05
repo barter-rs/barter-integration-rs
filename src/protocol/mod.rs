@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 /// [`ProtocolParser`].
 pub mod websocket;
 
-/// Contains HTTP client capable of executing signed & unsigned requests, as well as an associated 
+/// Contains HTTP client capable of executing signed & unsigned requests, as well as an associated
 /// exchange oriented HTTP request.
 pub mod http;
 
