@@ -55,7 +55,7 @@ pub enum SocketError {
 }
 
 /// Normalised exchange API errors generated in `barter-integration`.
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ExchangeError {
     #[error("exchange is in maintenance mode")]
     Maintenance,
@@ -89,6 +89,9 @@ pub enum ExchangeError {
 
     #[error("balance is insufficient")]
     BalanceInsufficient,
+
+    #[error("non-defined generic exchange error: {0}")]
+    Generic(String)
 }
 
 impl From<reqwest::Error> for SocketError {
