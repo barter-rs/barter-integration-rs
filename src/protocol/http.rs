@@ -70,9 +70,11 @@ pub trait HttpClient {
     /// Sign the outgoing Http request and add any required API specific headers.
     ///
     /// # Examples
+    ///
     /// ## Public Http Request
     ///  - No signing required.
     ///  - No additional headers required.
+    ///
     /// ```rust,ignore
     /// fn sign<Request>(&self, _: &Request, builder: RequestBuilder) -> Result<Reqwest::Request, SocketError>
     /// where
@@ -83,9 +85,11 @@ pub trait HttpClient {
     ///         .map_err(SocketError::from)
     /// }
     /// ```
+    ///
     /// ## Private Http Request: Ftx GET Request
     /// - Hmac signing.
     /// - Added Ftx required headers.
+    ///
     /// ```rust,ignore
     /// fn sign<Request>(&self, _: &Request, builder: RequestBuilder) -> Result<Reqwest::Request, SocketError>
     /// where
