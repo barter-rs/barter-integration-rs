@@ -202,11 +202,7 @@ pub trait HttpClient {
 
     /// If [`parse`](Self::parse) fails, this function attempts to parse the normalised
     /// [`SocketError::Exchange`](ExchangeError) associated with the response.
-    fn parse_error(
-        &self,
-        status_code: StatusCode,
-        data: &[u8],
-    ) -> Result<Self::Error, SocketError>;
+    fn parse_error(&self, status: StatusCode, data: &[u8]) -> Result<Self::Error, SocketError>;
 }
 
 /// Http request that can be executed by a [`HttpClient`].
