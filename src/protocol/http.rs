@@ -11,53 +11,23 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tracing::{error, warn};
 
+/// Default Http [`reqwest::Request`] timeout Duration.
 const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub trait HttpRequest<QueryParams = (), Body = ()>
-where
-    QueryParams: Serialize,
-    Body: Serialize,
-{
-    type Response: DeserializeOwned;
-
-    fn metric_tag() -> Tag;
-    fn method() -> reqwest::Method;
-
-    fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
-    where
-        S: Into<String>,
-    {
-        // Generate Url String
-        let mut url = base_url.into() + Self::path();
-
-        // Add optional query parameters
-        if let Some(parameters) = self.query_params() {
-            let query_string = serde_qs::to_string(parameters)?;
-            url.push('?');
-            url.push_str(&query_string);
-        }
-
-        reqwest::Url::parse(&url).map_err(SocketError::from)
-    }
-
-    fn path() -> &'static str;
-    fn query_params(&self) -> Option<&QueryParams> {
-        None
-    }
-    fn body(&self) -> Option<&Body> {
-        None
-    }
-    fn timeout() -> Duration {
-        DEFAULT_HTTP_REQUEST_TIMEOUT
-    }
-}
-
+///
 #[async_trait]
 pub trait HttpClient {
+    /// Reference to a reusable [`reqwest::Client`].
     fn client(&self) -> &reqwest::Client;
+
+    /// Reference to the [`Metric`] channel transmitter, used for sending measured Http request
+    /// execution metadata.
     fn metric_tx(&self) -> &mpsc::UnboundedSender<Metric>;
+
+    /// Base Url of the API being interacted with.
     fn base_url(&self) -> &str;
 
+    /// Execute the provided [`HttpRequest`].
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, SocketError>
     where
         Request: HttpRequest + Send,
@@ -75,6 +45,7 @@ pub trait HttpClient {
         self.parse::<Request::Response>(response).await
     }
 
+    /// Use the provided [`HttpRequest`] to construct a Http [`reqwest::RequestBuilder`].
     fn builder<Request>(&self, request: &Request) -> Result<RequestBuilder, SocketError>
     where
         Request: HttpRequest,
@@ -96,6 +67,47 @@ pub trait HttpClient {
         Ok(builder)
     }
 
+    /// Sign the outgoing Http request and add any required API specific headers.
+    ///
+    /// # Examples
+    /// ## Public Http Request
+    ///  - No signing required.
+    ///  - No additional headers required.
+    /// ```rust,ignore
+    /// fn sign<Request>(&self, _: &Request, builder: RequestBuilder) -> Result<Reqwest::Request, SocketError>
+    /// where
+    ///     Request: HttpRequest,
+    /// {
+    ///     builder
+    ///         .build()
+    ///         .map_err(SocketError::from)
+    /// }
+    /// ```
+    /// ## Private Http Request: Ftx GET Request
+    /// - Hmac signing.
+    /// - Added Ftx required headers.
+    /// ```rust,ignore
+    /// fn sign<Request>(&self, _: &Request, builder: RequestBuilder) -> Result<Reqwest::Request, SocketError>
+    /// where
+    ///     Request: HttpRequest,
+    /// {
+    ///     // Current millisecond timestamp
+    ///     let time = Utc::now().timestamp_millis().to_string();
+    ///
+    ///     // Generate signature
+    ///     let mut hmac = self.hmac.clone();
+    ///     hmac.update(format!("{time}{}{}", Request::method(), Request::path()).as_bytes());
+    ///     let signature = format!("{:x}", hmac.finalize().into_bytes());
+    ///
+    ///     // Add Ftx required Headers & build reqwest::Request
+    ///     builder
+    ///         .header(HEADER_FTX_KEY, &self.api_key)
+    ///         .header(HEADER_FTX_SIGN, &signature)
+    ///         .header(HEADER_FTX_TS, &time)
+    ///         .build()
+    ///         .map_err(SocketError::from)
+    /// }
+    /// ```
     fn sign<Request>(
         &self,
         request: &Request,
@@ -104,6 +116,10 @@ pub trait HttpClient {
     where
         Request: HttpRequest;
 
+    /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].
+    ///
+    /// Default implementation measures the Http request round trip duration and sends the
+    /// associated [`Metric`] on the [`Metric`] transmitter.
     async fn measured_execution<Request>(
         &self,
         request: reqwest::Request,
@@ -136,11 +152,10 @@ pub trait HttpClient {
             );
         }
 
-        println!("Request Time: {duration:?}");
-
         Ok(response)
     }
 
+    /// Attempt to parse the [`reqwest::Response`] into the associated [`HttpRequest::Response`].
     async fn parse<Response>(&self, response: reqwest::Response) -> Result<Response, SocketError>
     where
         Response: DeserializeOwned,
@@ -176,9 +191,63 @@ pub trait HttpClient {
         })
     }
 
+    /// If [`parse`](Self::parse) fails, this function attempts to parse the normalised
+    /// [`SocketError::Exchange`](ExchangeError) associated with the response.
     fn parse_error(
         &self,
         status_code: StatusCode,
         data: &[u8],
     ) -> Result<ExchangeError, SocketError>;
+}
+
+///
+pub trait HttpRequest<QueryParams = (), Body = ()>
+where
+    QueryParams: Serialize,
+    Body: Serialize,
+{
+    /// Expected response type this request will be answered with if successful.
+    type Response: DeserializeOwned;
+
+    /// [`Metric`] [`Tag`] that identifies this request.
+    fn metric_tag() -> Tag;
+
+    /// Http [`reqwest::Method`] of this request.
+    fn method() -> reqwest::Method;
+
+    /// Generates the request [`reqwest::Url`] given the provided base API url.
+    fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
+    where
+        S: Into<String>,
+    {
+        // Generate Url String
+        let mut url = base_url.into() + Self::path();
+
+        // Add optional query parameters
+        if let Some(parameters) = self.query_params() {
+            let query_string = serde_qs::to_string(parameters)?;
+            url.push('?');
+            url.push_str(&query_string);
+        }
+
+        reqwest::Url::parse(&url).map_err(SocketError::from)
+    }
+
+    /// Additional [`Url`] path to the resource.
+    fn path() -> &'static str;
+
+    /// Optional query parameters for this request.
+    fn query_params(&self) -> Option<&QueryParams> {
+        None
+    }
+
+    /// Optional Body for this request.
+    fn body(&self) -> Option<&Body> {
+        None
+    }
+
+    /// Http request timeout [`Duration`].
+    fn timeout() -> Duration {
+        DEFAULT_HTTP_REQUEST_TIMEOUT
+    }
 }
