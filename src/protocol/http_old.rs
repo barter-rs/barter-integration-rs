@@ -185,7 +185,7 @@ pub trait HttpClient {
             Err(serde_error) => serde_error,
         };
 
-        // Log errors if failed to deserialise reqwest::Response into Response or API DriverError
+        // Log errors if failed to deserialise reqwest::Response into Response or API Self::Error
         error!(
             ?status_code,
             ?parse_ok_error,
