@@ -1,52 +1,93 @@
-use crate::SocketError;
-use reqwest::{Request, RequestBuilder};
-use hmac::{Hmac, Mac};
-use crate::protocol::http::rest::RestRequest;
+use crate::{
+    SocketError,
+    protocol::http::rest::RestRequest
+};
+use reqwest::RequestBuilder;
 
-pub trait Signer {
-    fn sign<Request>(&self, request: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError>;
-}
-
-pub trait SignerNew {
+/// Generates and encodes a Http request signature.
+pub trait SignatureGenerator {
     type Encoder: Encoder;
 
-    fn sign<Request>(&self, request: &Request, builder: &RequestBuilder) -> Result<reqwest::Request, SocketError>
+    /// Generates a [`RestRequest`] signature and encodes it into the required `String` format.
+    fn signature<Request>(&self, request: &Request, builder: &RequestBuilder) -> Result<String, SocketError>
     where
-        Request: RestRequest;
-
-    fn generate_signature<Bytes>(&self, request: &Request, builder: &RequestBuilder) -> Result<String, SocketError>
-    where
-        Bytes: AsRef<[u8]>
+        Request: RestRequest,
     {
-        self.to_signature_bytes(request, builder)
+        self.to_signature_bytes::<Request>(request, builder)
             .map(Self::Encoder::encode)
     }
 
-    fn to_signature_bytes<Request, Bytes>(&self, request: &Request, builder: &RequestBuilder) -> Result<Bytes, SocketError>
+    /// Generates the signature associated with the provided [`RestRequest`]. This will contain
+    /// API specific logic.
+    ///
+    /// # Examples
+    ///
+    /// ## Ftx: Private Http GET Request
+    /// ```rust,ignore
+    /// fn to_signature_bytes<Request>(&self, request: &Request, builder: &RequestBuilder) -> Result<&[u8], SocketError>
+    /// where
+    ///     Request: RestRequest
+    /// {
+    ///     // Current millisecond timestamp
+    ///     let time = Utc::now().timestamp_millis().to_string();
+    ///
+    ///     // Generate bytes to sign
+    ///     format!("{time}{}{}", Request::method(), Request::path()).as_bytes()
+    /// }
+    /// ```
+    fn to_signature_bytes<Request>(&self, request: &Request, builder: &RequestBuilder) -> Result<&[u8], SocketError>
     where
-        Request: RestRequest,
-        Bytes: AsRef<[u8]>;
+        Request: RestRequest;
 }
 
-trait Encoder {
+/// Encodes bytes data.
+pub trait Encoder {
+    /// Encodes the bytes data into some `String` format.
     fn encode<Bytes>(data: Bytes) -> String
     where
         Bytes: AsRef<[u8]>;
 }
 
-struct NoAuth;
+/// Signs Http requests and adds any required headers.
+pub trait Signer {
+    /// Adds an authorisation signature to the [`RequestBuilder`], any required headers, and then
+    /// builds the [`reqwest::Request`]. This will contain API specific logic.
+    ///
+    /// # Examples
+    ///
+    /// ## Ftx: Private Http GET Request
+    /// ```rust,ignore
+    /// fn sign_request(&self, builder: RequestBuilder, signature: String) -> Result<reqwest::Request, SocketError> {
+    ///     // Add Ftx required Headers & build reqwest::Request
+    ///     builder
+    ///         .header(HEADER_FTX_KEY, &self.api_key)
+    ///         .header(HEADER_FTX_SIGN, &signature)
+    ///         .header(HEADER_FTX_TS, &time)
+    ///         .build()
+    ///         .map_err(SocketError::from)
+    /// }
+    /// ```
+    fn sign_request(&self, builder: RequestBuilder, signature: String) -> Result<reqwest::Request, SocketError>;
+}
 
-impl Signer for NoAuth {
-    fn sign<Request>(&self, _: &Request, builder: RequestBuilder) -> Result<reqwest::Request, SocketError> {
-        builder
-            .build()
-            .map_err(SocketError::from)
+/// Responsible for generating [`RestRequest`] signatures and completing [`RequestBuilder`] by
+/// adding the encoded signature to the correct [`reqwest::Request`] location (header, body, etc).
+#[derive(Debug)]
+pub struct SignManager<SigGen, Sig>
+where
+    SigGen: SignatureGenerator,
+    Sig: Signer,
+{
+    pub generator: SigGen,
+    pub signer: Sig,
+}
+
+/// Encodes bytes data as a hex `String` using lowercase characters.
+#[derive(Debug, Copy, Clone)]
+pub struct HexEncoder;
+
+impl Encoder for HexEncoder {
+    fn encode<Bytes>(data: Bytes) -> String where Bytes: AsRef<[u8]> {
+        hex::encode(data)
     }
 }
-
-struct Hmac256<Encoder> {
-    api_key: String,
-    hmac: Hmac<sha2::Sha256>,
-    encoder: Encoder,
-}
-

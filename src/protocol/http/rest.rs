@@ -4,17 +4,18 @@ use crate::{
 };
 use super::{
     HttpParser,
-    signer::Signer
+    signer::{SignatureGenerator, Signer, SignManager},
 };
 use std::time::Duration;
 use bytes::Bytes;
 use chrono::Utc;
-use reqwest::{RequestBuilder, StatusCode};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use reqwest::StatusCode;
+use serde::{
+    de::DeserializeOwned,
+    Serialize,
+};
 use tokio::sync::mpsc;
 use tracing::warn;
-use crate::protocol::http_old::HttpRequest;
 
 /// Default Http [`reqwest::Request`] timeout Duration.
 const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
@@ -30,14 +31,14 @@ pub trait RestRequest {
     /// Expected response type if this request was successful.
     type Response: DeserializeOwned;
 
-    /// [`Metric`] [`Tag`] that identifies this request.
-    fn metric_tag() -> Tag;
+    /// Additional [`Url`] path to the resource.
+    fn path() -> &'static str;
 
     /// Http [`reqwest::Method`] of this request.
     fn method() -> reqwest::Method;
 
-    /// Additional [`Url`] path to the resource.
-    fn path() -> &'static str;
+    /// [`Metric`] [`Tag`] that identifies this request.
+    fn metric_tag() -> Tag;
 
     /// Generates the request [`reqwest::Url`] given the provided base API url.
     fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
@@ -71,40 +72,36 @@ pub trait RestRequest {
     fn timeout() -> Duration {
         DEFAULT_HTTP_REQUEST_TIMEOUT
     }
-
-
 }
 
-/// Todo:
+///
 #[derive(Debug)]
-pub struct RestClient<'a, Sig, Parser> {
+pub struct RestClient<'a, SigGen, Sig, Parser>
+where
+    SigGen: SignatureGenerator,
+    Sig: Signer,
+{
     base_url: &'a str,
     http_client: reqwest::Client,
     metric_tx: mpsc::UnboundedSender<Metric>,
-    signer: Sig,
+    sign: SignManager<SigGen, Sig>,
     parser: Parser,
 }
 
-impl<'a, Sign, Parser> RestClient<'a, Sign, Parser>
+impl<'a, SigGen, Sig, Parser> RestClient<'a, SigGen, Sig, Parser>
 where
-    Sign: Signer,
+    SigGen: SignatureGenerator,
+    Sig: Signer,
     Parser: HttpParser,
 {
-    // Could pass different builders here for each request?
+
+    /// Execute the provided [`RestRequest`].
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Parser::Error>
     where
         Request: RestRequest,
     {
-        // Use provided Request to construct a reqwest::RequestBuilder
-        let builder = self.builder(&request)?;
-
-        // Sign:
-        // 1. Generate signature
-        // 2. Add to request
-        // 3. build request
-
-        // Sign reqwest::RequestBuilder with exchange specific recipe
-        let request = self.signer.sign(&request, builder)?;
+        // Use provided Request to construct a signed reqwest::Request
+        let request = self.build(&request)?;
 
         // Measure request execution
         let (status, payload) = self
@@ -116,31 +113,13 @@ where
             .parse::<Request::Response>(status, &payload)
     }
 
-    // Todo: This is duplicated. In RestRequest or here?
-    fn url<Request>(&self, request: &Request) -> Result<reqwest::Url, SocketError>
-    where
-        Request: RestRequest
-    {
-        // Generate Url String
-        let mut url = self.base_url.to_owned() + Request::path();
-
-        // Add optional query parameters
-        if let Some(parameters) = request.query_params() {
-            let query_string = serde_qs::to_string(parameters)?;
-            url.push('?');
-            url.push_str(&query_string);
-        }
-
-        reqwest::Url::parse(&url).map_err(SocketError::from)
-    }
-
-    /// Use the provided [`RestRequest`] to construct a Http [`reqwest::RequestBuilder`].
-    fn builder<Request>(&self, request: &Request) -> Result<RequestBuilder, SocketError>
+    /// Use the provided [`RestRequest`] to construct a signed Http [`reqwest::Request`].
+    fn build<Request>(&self, request: &Request) -> Result<reqwest::Request, SocketError>
     where
         Request: RestRequest
     {
         // Generate Url
-        let url = request.url(base_url)?;
+        let url = request.url(self.base_url)?;
 
         // Construct RequestBuilder with method & url
         let mut builder = self
@@ -153,9 +132,19 @@ where
             builder = builder.json(body);
         }
 
-        Ok(builder)
+        // Generate request signature
+        let signature = self.sign.generator.signature::<Request>(request, &builder)?;
+
+        // Sign reqwest::RequestBuilder with exchange specific method
+        let request = self.sign.signer.sign_request(builder, signature)?;
+
+        Ok(request)
     }
 
+    /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].
+    ///
+    /// Measures the Http request round trip duration and sends the associated [`Metric`]
+    /// via the [`Metric`] transmitter.
     async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<(StatusCode, Bytes), SocketError>
     where
         Request: RestRequest

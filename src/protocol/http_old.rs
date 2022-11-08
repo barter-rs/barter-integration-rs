@@ -219,6 +219,9 @@ pub trait HttpRequest {
     /// [`Metric`] [`Tag`] that identifies this request.
     fn metric_tag() -> Tag;
 
+    /// Additional [`Url`] path to the resource.
+    fn path() -> &'static str;
+
     /// Http [`reqwest::Method`] of this request.
     fn method() -> reqwest::Method;
 
@@ -239,9 +242,6 @@ pub trait HttpRequest {
 
         reqwest::Url::parse(&url).map_err(SocketError::from)
     }
-
-    /// Additional [`Url`] path to the resource.
-    fn path() -> &'static str;
 
     /// Optional query parameters for this request.
     fn query_params(&self) -> Option<&Self::QueryParams> {

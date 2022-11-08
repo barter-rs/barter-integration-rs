@@ -9,19 +9,19 @@ pub mod signer;
 pub trait HttpParser {
     type Error: From<SocketError>;
 
-    /// Attempt to parse a [`StatusCode`] & payload `&[u8]` bytes into deserialisable `Response`.
+    /// Attempt to parse a [`StatusCode`] & bytes payload into a deserialisable `Response`.
     fn parse<Response>(&self, status: StatusCode, payload: &[u8]) -> Result<Response, Self::Error>
     where
         Response: DeserializeOwned,
     {
         // Attempt to deserialise reqwest::Response bytes into Ok(Response)
-        let parse_ok_error = match serde_json::from_slice::<Response>(&payload) {
+        let parse_ok_error = match serde_json::from_slice::<Response>(payload) {
             Ok(response) => return Ok(response),
             Err(serde_error) => serde_error,
         };
 
         // Attempt to deserialise API ExchangeError if Ok(Response) deserialisation failed
-        let parse_error_error = match self.parse_api_error(status, &payload) {
+        let parse_error_error = match self.parse_api_error(status, payload) {
             Ok(api_error) => return Err(api_error),
             Err(serde_error) => serde_error,
         };
@@ -31,7 +31,7 @@ pub trait HttpParser {
             status_code = ?status,
             ?parse_ok_error,
             ?parse_error_error,
-            response_body = %String::from_utf8_lossy(&payload),
+            response_body = %String::from_utf8_lossy(payload),
             "error deserializing HTTP response"
         );
 
