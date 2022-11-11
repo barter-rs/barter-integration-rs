@@ -1,12 +1,6 @@
-use crate::{
-    error::SocketError,
-    metric::Tag,
-};
+use crate::{error::SocketError, metric::Tag};
+use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
-use serde::{
-    Serialize,
-    de::DeserializeOwned
-};
 
 /// Configurable [`client::RestClient`] capable of executing signed [`RestRequest`]s and parsing
 /// responses.

@@ -2,10 +2,10 @@ use crate::{
     error::SocketError,
     metric::{Field, Metric, Tag},
     protocol::http::{
-        HttpParser,
-        private::{Signer, RequestSigner, encoder::Encoder},
+        private::{encoder::Encoder, RequestSigner, Signer},
         rest::RestRequest,
-    }
+        HttpParser,
+    },
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -45,7 +45,10 @@ where
     Parser: HttpParser,
 {
     /// Execute the provided [`RestRequest`].
-    pub async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Parser::Error>
+    pub async fn execute<Request>(
+        &self,
+        request: Request,
+    ) -> Result<Request::Response, Parser::Error>
     where
         Request: RestRequest,
     {
@@ -53,19 +56,16 @@ where
         let request = self.build(request)?;
 
         // Measure request execution
-        let (status, payload) = self
-            .measured_execution::<Request>(request)
-            .await?;
+        let (status, payload) = self.measured_execution::<Request>(request).await?;
 
         // Attempt to parse API Success or Error response
-        self.parser
-            .parse::<Request::Response>(status, &payload)
+        self.parser.parse::<Request::Response>(status, &payload)
     }
 
     /// Use the provided [`RestRequest`] to construct a signed Http [`reqwest::Request`].
     pub fn build<Request>(&self, request: Request) -> Result<reqwest::Request, SocketError>
     where
-        Request: RestRequest
+        Request: RestRequest,
     {
         // Generate Url
         let url = request.url(self.base_url)?;
@@ -89,9 +89,12 @@ where
     ///
     /// Measures the Http request round trip duration and sends the associated [`Metric`]
     /// via the [`Metric`] transmitter.
-    pub async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<(StatusCode, Bytes), SocketError>
+    pub async fn measured_execution<Request>(
+        &self,
+        request: reqwest::Request,
+    ) -> Result<(StatusCode, Bytes), SocketError>
     where
-        Request: RestRequest
+        Request: RestRequest,
     {
         // Measure the HTTP request round trip duration
         let start = std::time::Instant::now();
@@ -117,7 +120,7 @@ where
 
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();
-        let payload = response.bytes().await?;// .map_err(SocketError::from)?;
+        let payload = response.bytes().await?; // .map_err(SocketError::from)?;
 
         Ok((status_code, payload))
     }
@@ -130,14 +133,13 @@ impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Pa
         metric_tx: mpsc::UnboundedSender<Metric>,
         signer: RequestSigner<Sig, Hmac, SigEncoder>,
         parser: Parser,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             http_client: reqwest::Client::new(),
             base_url,
             metric_tx,
             signer,
-            parser
+            parser,
         }
     }
 }

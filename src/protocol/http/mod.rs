@@ -51,5 +51,9 @@ pub trait HttpParser {
 
     /// If [`parse`](Self::parse) fails to deserialise the `Ok(Response)`, this function attempts
     /// to parse the API [`Self::Error`] associated with the response.
-    fn parse_api_error(&self, status: StatusCode, payload: &[u8]) -> Result<Self::Error, SocketError>;
+    fn parse_api_error(
+        &self,
+        status: StatusCode,
+        payload: &[u8],
+    ) -> Result<Self::Error, SocketError>;
 }
