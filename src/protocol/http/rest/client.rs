@@ -20,21 +20,21 @@ use tracing::warn;
 #[derive(Debug)]
 pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
     /// Reusable HTTP [`reqwest::Client`].
-    http_client: reqwest::Client,
+    pub http_client: reqwest::Client,
 
     /// Base Url of the API being interacted with.
-    base_url: &'a str,
+    pub base_url: &'a str,
 
     /// [`Metric`] transmitter for sending observed execution measurements to an external receiver.
-    metric_tx: mpsc::UnboundedSender<Metric>,
+    pub metric_tx: mpsc::UnboundedSender<Metric>,
 
     /// [`RestRequest`] signer utilising API specific [`Signer`] logic, a hashable [`Mac`], and a
     /// signature [`Encoder`].
-    signer: RequestSigner<Sig, Hmac, SigEncoder>,
+    pub signer: RequestSigner<Sig, Hmac, SigEncoder>,
 
     /// [`HttpParser`] that deserialises [`RestRequest::Response`]s, and upon failure parses
     /// API errors returned from the server.
-    parser: Parser,
+    pub parser: Parser,
 }
 
 impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Parser>
@@ -45,7 +45,7 @@ where
     Parser: HttpParser,
 {
     /// Execute the provided [`RestRequest`].
-    async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Parser::Error>
+    pub async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Parser::Error>
     where
         Request: RestRequest,
     {
@@ -63,7 +63,7 @@ where
     }
 
     /// Use the provided [`RestRequest`] to construct a signed Http [`reqwest::Request`].
-    fn build<Request>(&self, request: Request) -> Result<reqwest::Request, SocketError>
+    pub fn build<Request>(&self, request: Request) -> Result<reqwest::Request, SocketError>
     where
         Request: RestRequest
     {
@@ -89,7 +89,7 @@ where
     ///
     /// Measures the Http request round trip duration and sends the associated [`Metric`]
     /// via the [`Metric`] transmitter.
-    async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<(StatusCode, Bytes), SocketError>
+    pub async fn measured_execution<Request>(&self, request: reqwest::Request) -> Result<(StatusCode, Bytes), SocketError>
     where
         Request: RestRequest
     {

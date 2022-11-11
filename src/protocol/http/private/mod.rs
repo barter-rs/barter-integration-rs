@@ -1,6 +1,7 @@
 use self::encoder::Encoder;
 use super::rest::RestRequest;
 use crate::error::SocketError;
+use bytes::Bytes;
 use reqwest::RequestBuilder;
 use hmac::Mac;
 
@@ -9,6 +10,7 @@ pub mod encoder;
 
 /// API specific signing logic used by a [`RequestSigner`].
 pub trait Signer {
+    /// Configuration required to sign the [`RestRequest`]s for this API server.
     type Config;
 
     /// Generates a [`Self::Config`] for this [`RestRequest`] and [`RequestBuilder`].
@@ -43,7 +45,7 @@ pub trait Signer {
     ///     Ok(format!("{}{}{}", config.time, config.method, config.path).as_bytes())
     /// }
     /// ```
-    fn bytes_to_sign(config: &Self::Config) -> Result<&[u8], SocketError>;
+    fn bytes_to_sign(config: &Self::Config) -> Result<Bytes, SocketError>;
 
     /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`], [`RequestBuilder`],
     /// and generated cryptographic signature `String`.
@@ -94,12 +96,23 @@ where
 
         // Update Mac state & finalise bytes
         let mut mac = self.mac.clone();
-        mac.update(bytes_to_sign);
+        mac.update(&bytes_to_sign);
         let bytes_to_encode = mac.finalize().into_bytes();
 
         // Encode signature from Mac bytes
         let signature = self.encoder.encode(bytes_to_encode);
 
         Sig::build_signed_request(config, builder, signature)
+    }
+}
+
+impl<Sig, Hmac, SigEncoder> RequestSigner<Sig, Hmac, SigEncoder> {
+    /// Construct a new [`Self`] using the provided API specific configuration.
+    pub fn new(signer: Sig, mac: Hmac, encoder: SigEncoder) -> Self {
+        Self {
+            signer,
+            mac,
+            encoder
+        }
     }
 }
