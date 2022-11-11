@@ -20,7 +20,6 @@ pub trait RestRequest {
     /// Serialisable Body type - use unit struct () if not required for this request.
     type Body: Serialize;
 
-
     /// Additional [`Url`] path to the resource.
     fn path() -> &'static str;
 

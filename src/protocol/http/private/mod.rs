@@ -33,7 +33,11 @@ pub trait Signer {
     ///     }
     /// }
     /// ```
-    fn config<'a, Request>(&'a self, request: Request, builder: &RequestBuilder) -> Result<Self::Config<'a>, SocketError>
+    fn config<'a, Request>(
+        &'a self,
+        request: Request,
+        builder: &RequestBuilder,
+    ) -> Result<Self::Config<'a>, SocketError>
     where
         Request: RestRequest;
 
