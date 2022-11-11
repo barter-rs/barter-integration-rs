@@ -41,7 +41,7 @@ Barter-Integration is a high-performance, low-level framework for composing flex
 extensible core abstraction called the ExchangeStream. At a high level, an ExchangeStream is made up of a few 
 major components:
 * Inner Stream/Sink (eg/ WebSocket, FIX socket, etc).
-* ProtocolParser that is capable of parsing input protocol messages (eg/ WebSocket, FIX, etc.) as exchange
+* StreamParser that is capable of parsing input protocol messages (eg/ WebSocket, FIX, etc.) as exchange
   specific message. 
 * Transformer that transforms from exchange specific message into an iterator of desired outputs.
 
@@ -127,7 +127,7 @@ async fn main() {
     // Instantiate some arbitrary Transformer to apply to data parsed from the WebSocket protocol
     let transformer = StatefulTransformer { sum_of_volume: 0.0 };
 
-    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
+    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket StreamParser
     let mut ws_stream = ExchangeWsStream::new(binance_conn, transformer);
 
     // Receive a stream of your desired Output data model from the ExchangeStream
@@ -175,7 +175,7 @@ In addition to the Barter-Integration crate, the Barter project also maintains:
 * [`Barter-Execution`]: Financial exchange integrations for trade execution - yet to be released!
 
 ## Roadmap
-* Add new default ProtocolParser implementations to enable integration with other popular systems such as Kafka. 
+* Add new default StreamParser implementations to enable integration with other popular systems such as Kafka. 
 
 ## Licence
 This project is licensed under the [MIT license].

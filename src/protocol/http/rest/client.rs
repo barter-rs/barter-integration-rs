@@ -14,7 +14,6 @@ use reqwest::StatusCode;
 use tokio::sync::mpsc;
 use tracing::warn;
 
-
 /// Configurable REST client capable of executing signed [`RestRequest`]s. Use this when
 /// integrating APIs that require Http in order to interact with resources. Each API will require
 /// a specific combination of [`Signer`], [`Mac`], signature [`Encoder`], and [`Parser`].
@@ -33,8 +32,8 @@ pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
     /// signature [`Encoder`].
     signer: RequestSigner<Sig, Hmac, SigEncoder>,
 
-    /// [`HttpParser`] that deserialises a [`RestRequest::Response`], and upon failure will
-    /// parse the API error into a formalised error.
+    /// [`HttpParser`] that deserialises [`RestRequest::Response`]s, and upon failure parses
+    /// API errors returned from the server.
     parser: Parser,
 }
 

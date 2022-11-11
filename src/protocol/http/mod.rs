@@ -3,13 +3,17 @@ use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use tracing::error;
 
-///
+/// Defines an abstract [`RestRequest`](rest::RestRequest) that can be executed by a fully
+/// configurable [`RestClient`](rest::client::RestClient).
 pub mod rest;
 
-///
+/// Defines a configurable [`RequestSigner`](private::RequestSigner) that signs Http
+/// [`RestRequest`](rest::RestRequest) using API specific logic.
 pub mod private;
 
-/// Todo:
+/// Utilised by a [`RestClient`](rest::client::RestClient) to deserialise
+/// [`RestRequest::Response`](rest::RestRequest::Response), and upon failure parses API errors
+/// returned from the server.
 pub trait HttpParser {
     type Error: From<SocketError>;
 

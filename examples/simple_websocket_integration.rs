@@ -76,7 +76,7 @@ async fn main() {
     // Instantiate some arbitrary Transformer to apply to data parsed from the WebSocket protocol
     let transformer = StatefulTransformer { sum_of_volume: 0.0 };
 
-    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
+    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket StreamParser
     let mut ws_stream = ExchangeWsStream::new(binance_conn, transformer);
 
     // Receive a stream of your desired Output data model from the ExchangeStream
