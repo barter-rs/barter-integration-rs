@@ -1,4 +1,4 @@
-use crate::{error::SocketError, metric::Tag};
+use crate::metric::Tag;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
@@ -11,14 +11,15 @@ const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Http REST request that can be executed by a [`RestClient`].
 pub trait RestRequest {
+    /// Expected response type if this request was successful.
+    type Response: DeserializeOwned;
+
     /// Serialisable query parameters type - use unit struct () if not required for this request.
     type QueryParams: Serialize;
 
     /// Serialisable Body type - use unit struct () if not required for this request.
     type Body: Serialize;
 
-    /// Expected response type if this request was successful.
-    type Response: DeserializeOwned;
 
     /// Additional [`Url`] path to the resource.
     fn path() -> &'static str;
@@ -28,24 +29,6 @@ pub trait RestRequest {
 
     /// [`Metric`] [`Tag`] that identifies this request.
     fn metric_tag() -> Tag;
-
-    /// Generates the request [`reqwest::Url`] given the provided base API url.
-    fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
-    where
-        S: Into<String>,
-    {
-        // Generate Url String
-        let mut url = base_url.into() + Self::path();
-
-        // Add optional query parameters
-        if let Some(parameters) = self.query_params() {
-            let query_string = serde_qs::to_string(parameters)?;
-            url.push('?');
-            url.push_str(&query_string);
-        }
-
-        reqwest::Url::parse(&url).map_err(SocketError::from)
-    }
 
     /// Optional query parameters for this request.
     fn query_params(&self) -> Option<&Self::QueryParams> {

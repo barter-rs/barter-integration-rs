@@ -11,7 +11,9 @@ pub mod encoder;
 /// API specific signing logic used by a [`RequestSigner`].
 pub trait Signer {
     /// Configuration required to sign the [`RestRequest`]s for this API server.
-    type Config;
+    type Config<'a>
+    where
+        Self: 'a;
 
     /// Generates a [`Self::Config`] for this [`RestRequest`] and [`RequestBuilder`].
     ///
@@ -31,7 +33,7 @@ pub trait Signer {
     ///     }
     /// }
     /// ```
-    fn config<Request>(&self, request: Request, builder: &RequestBuilder) -> Self::Config
+    fn config<'a, Request>(&'a self, request: Request, builder: &RequestBuilder) -> Result<Self::Config<'a>, SocketError>
     where
         Request: RestRequest;
 
@@ -45,7 +47,7 @@ pub trait Signer {
     ///     Ok(format!("{}{}{}", config.time, config.method, config.path).as_bytes())
     /// }
     /// ```
-    fn bytes_to_sign(config: &Self::Config) -> Result<Bytes, SocketError>;
+    fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes;
 
     /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`], [`RequestBuilder`],
     /// and generated cryptographic signature `String`.
@@ -64,8 +66,8 @@ pub trait Signer {
     ///         .map_err(SocketError::from)
     /// }
     /// ```
-    fn build_signed_request(
-        config: Self::Config,
+    fn build_signed_request<'a>(
+        config: Self::Config<'a>,
         builder: RequestBuilder,
         signature: String,
     ) -> Result<reqwest::Request, SocketError>;
@@ -86,6 +88,15 @@ where
     Hmac: Mac + Clone,
     SigEncoder: Encoder,
 {
+    /// Construct a new [`Self`] using the provided API specific configuration.
+    pub fn new(signer: Sig, mac: Hmac, encoder: SigEncoder) -> Self {
+        Self {
+            signer,
+            mac,
+            encoder,
+        }
+    }
+
     /// Build a signed Http [`reqwest::Request`] using the provided [`RestRequest`] and
     /// [`RequestBuilder`] state.
     pub fn sign<Request>(
@@ -97,10 +108,10 @@ where
         Request: RestRequest,
     {
         // Build configuration required for generating signed requests
-        let config = self.signer.config(request, &builder);
+        let config = self.signer.config(request, &builder)?;
 
         // Generate bytes data used to update Mac state
-        let bytes_to_sign = Sig::bytes_to_sign(&config)?;
+        let bytes_to_sign = Sig::bytes_to_sign(&config);
 
         // Update Mac state & finalise bytes
         let mut mac = self.mac.clone();
@@ -111,16 +122,5 @@ where
         let signature = self.encoder.encode(bytes_to_encode);
 
         Sig::build_signed_request(config, builder, signature)
-    }
-}
-
-impl<Sig, Hmac, SigEncoder> RequestSigner<Sig, Hmac, SigEncoder> {
-    /// Construct a new [`Self`] using the provided API specific configuration.
-    pub fn new(signer: Sig, mac: Hmac, encoder: SigEncoder) -> Self {
-        Self {
-            signer,
-            mac,
-            encoder,
-        }
     }
 }

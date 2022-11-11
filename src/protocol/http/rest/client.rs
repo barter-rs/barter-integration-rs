@@ -19,7 +19,7 @@ use tracing::warn;
 /// a specific combination of [`Signer`], [`Mac`], signature [`Encoder`], and [`Parser`].
 #[derive(Debug)]
 pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
-    /// Reusable HTTP [`reqwest::Client`].
+    /// HTTP [`reqwest::Client`] for executing signed [`reqwest::Request`]s.
     pub http_client: reqwest::Client,
 
     /// Base Url of the API being interacted with.
@@ -67,8 +67,8 @@ where
     where
         Request: RestRequest,
     {
-        // Generate Url
-        let url = request.url(self.base_url)?;
+        // Construct url
+        let url = self.base_url.to_string() + Request::path();
 
         // Construct RequestBuilder with method & url
         let mut builder = self
@@ -76,7 +76,12 @@ where
             .request(Request::method(), url)
             .timeout(Request::timeout());
 
-        // Add optional request Body
+        // Add optional query parameters
+        if let Some(query_params) = request.query_params() {
+            builder = builder.query(query_params);
+        }
+
+        // Add optional Body
         if let Some(body) = request.body() {
             builder = builder.json(body);
         }
