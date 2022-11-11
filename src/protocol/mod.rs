@@ -9,8 +9,6 @@ pub mod websocket;
 /// exchange oriented HTTP request.
 pub mod http;
 
-pub mod http_old;
-
 /// `ProtocolParser`s are capable of parsing the input messages from a given protocol (eg WebSocket,
 /// Financial Information eXchange, etc) and deserialising into an `Output`.
 pub trait ProtocolParser {

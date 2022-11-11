@@ -3,9 +3,13 @@ use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use tracing::error;
 
+///
 pub mod rest;
-pub mod signer;
 
+///
+pub mod private;
+
+/// Todo:
 pub trait HttpParser {
     type Error: From<SocketError>;
 

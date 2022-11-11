@@ -47,6 +47,10 @@ pub enum SocketError {
     #[error("HTTP request timed out")]
     HttpTimeout(reqwest::Error),
 
+    /// REST http response error
+    #[error("HTTP response (status={0}) error: {1}")]
+    HttpResponse(reqwest::StatusCode, String),
+
     #[error("consumed unidentifiable message: {0}")]
     Unidentifiable(SubscriptionId),
 

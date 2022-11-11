@@ -1,107 +1,57 @@
 use crate::{
+    error::SocketError,
     metric::{Field, Metric, Tag},
-    SocketError
+    protocol::http::{
+        HttpParser,
+        private::{Signer, RequestSigner, encoder::Encoder},
+        rest::RestRequest,
+    }
 };
-use super::{
-    HttpParser,
-    signer::{SignatureGenerator, Signer, SignManager},
-};
-use std::time::Duration;
 use bytes::Bytes;
 use chrono::Utc;
+use hmac::Mac;
 use reqwest::StatusCode;
-use serde::{
-    de::DeserializeOwned,
-    Serialize,
-};
 use tokio::sync::mpsc;
 use tracing::warn;
 
-/// Default Http [`reqwest::Request`] timeout Duration.
-const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Http REST request that can be executed by a [`RestClient`].
-pub trait RestRequest {
-    /// Serialisable query parameters type - use unit struct () if not required for this request.
-    type QueryParams: Serialize;
-
-    /// Serialisable Body type - use unit struct () if not required for this request.
-    type Body: Serialize;
-
-    /// Expected response type if this request was successful.
-    type Response: DeserializeOwned;
-
-    /// Additional [`Url`] path to the resource.
-    fn path() -> &'static str;
-
-    /// Http [`reqwest::Method`] of this request.
-    fn method() -> reqwest::Method;
-
-    /// [`Metric`] [`Tag`] that identifies this request.
-    fn metric_tag() -> Tag;
-
-    /// Generates the request [`reqwest::Url`] given the provided base API url.
-    fn url<S: Into<String>>(&self, base_url: S) -> Result<reqwest::Url, SocketError>
-    where
-        S: Into<String>,
-    {
-        // Generate Url String
-        let mut url = base_url.into() + Self::path();
-
-        // Add optional query parameters
-        if let Some(parameters) = self.query_params() {
-            let query_string = serde_qs::to_string(parameters)?;
-            url.push('?');
-            url.push_str(&query_string);
-        }
-
-        reqwest::Url::parse(&url).map_err(SocketError::from)
-    }
-
-    /// Optional query parameters for this request.
-    fn query_params(&self) -> Option<&Self::QueryParams> {
-        None
-    }
-
-    /// Optional Body for this request.
-    fn body(&self) -> Option<&Self::Body> {
-        None
-    }
-
-    /// Http request timeout [`Duration`].
-    fn timeout() -> Duration {
-        DEFAULT_HTTP_REQUEST_TIMEOUT
-    }
-}
-
-///
+/// Configurable REST client capable of executing signed [`RestRequest`]s. Use this when
+/// integrating APIs that require Http in order to interact with resources. Each API will require
+/// a specific combination of [`Signer`], [`Mac`], signature [`Encoder`], and [`Parser`].
 #[derive(Debug)]
-pub struct RestClient<'a, SigGen, Sig, Parser>
-where
-    SigGen: SignatureGenerator,
-    Sig: Signer,
-{
-    base_url: &'a str,
+pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
+    /// Reusable HTTP [`reqwest::Client`].
     http_client: reqwest::Client,
+
+    /// Base Url of the API being interacted with.
+    base_url: &'a str,
+
+    /// [`Metric`] transmitter for sending observed execution measurements to an external receiver.
     metric_tx: mpsc::UnboundedSender<Metric>,
-    sign: SignManager<SigGen, Sig>,
+
+    /// [`RestRequest`] signer utilising API specific [`Signer`] logic, a hashable [`Mac`], and a
+    /// signature [`Encoder`].
+    signer: RequestSigner<Sig, Hmac, SigEncoder>,
+
+    /// [`HttpParser`] that deserialises a [`RestRequest::Response`], and upon failure will
+    /// parse the API error into a formalised error.
     parser: Parser,
 }
 
-impl<'a, SigGen, Sig, Parser> RestClient<'a, SigGen, Sig, Parser>
+impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Parser>
 where
-    SigGen: SignatureGenerator,
     Sig: Signer,
+    Hmac: Mac + Clone,
+    SigEncoder: Encoder,
     Parser: HttpParser,
 {
-
     /// Execute the provided [`RestRequest`].
     async fn execute<Request>(&self, request: Request) -> Result<Request::Response, Parser::Error>
     where
         Request: RestRequest,
     {
         // Use provided Request to construct a signed reqwest::Request
-        let request = self.build(&request)?;
+        let request = self.build(request)?;
 
         // Measure request execution
         let (status, payload) = self
@@ -114,7 +64,7 @@ where
     }
 
     /// Use the provided [`RestRequest`] to construct a signed Http [`reqwest::Request`].
-    fn build<Request>(&self, request: &Request) -> Result<reqwest::Request, SocketError>
+    fn build<Request>(&self, request: Request) -> Result<reqwest::Request, SocketError>
     where
         Request: RestRequest
     {
@@ -132,13 +82,8 @@ where
             builder = builder.json(body);
         }
 
-        // Generate request signature
-        let signature = self.sign.generator.signature::<Request>(request, &builder)?;
-
-        // Sign reqwest::RequestBuilder with exchange specific method
-        let request = self.sign.signer.sign_request(builder, signature)?;
-
-        Ok(request)
+        // Build signed reqwest::Request
+        self.signer.sign(request, builder)
     }
 
     /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].
@@ -176,5 +121,24 @@ where
         let payload = response.bytes().await?;// .map_err(SocketError::from)?;
 
         Ok((status_code, payload))
+    }
+}
+
+impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
+    /// Construct a new [`Self`] using the provided configuration.
+    pub fn new(
+        base_url: &'a str,
+        metric_tx: mpsc::UnboundedSender<Metric>,
+        signer: RequestSigner<Sig, Hmac, SigEncoder>,
+        parser: Parser,
+    ) -> Self
+    {
+        Self {
+            http_client: reqwest::Client::new(),
+            base_url,
+            metric_tx,
+            signer,
+            parser
+        }
     }
 }
