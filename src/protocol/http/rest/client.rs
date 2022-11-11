@@ -48,7 +48,7 @@ where
     pub async fn execute<Request>(
         &self,
         request: Request,
-    ) -> Result<Request::Response, Parser::Error>
+    ) -> Result<Request::Response, Parser::OutputError>
     where
         Request: RestRequest,
     {
