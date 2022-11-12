@@ -125,7 +125,7 @@ where
 
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();
-        let payload = response.bytes().await?; // .map_err(SocketError::from)?;
+        let payload = response.bytes().await?;
 
         Ok((status_code, payload))
     }
