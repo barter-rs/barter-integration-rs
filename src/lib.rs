@@ -37,6 +37,9 @@ pub mod protocol;
 /// Contains the flexible `Metric` type used for representing real-time metrics generically.
 pub mod metric;
 
+/// Utilities to assist deserialisation.
+pub mod de;
+
 /// [`Validator`]s are capable of determining if their internal state is satisfactory to fulfill
 /// some use case defined by the implementor.
 pub trait Validator {
