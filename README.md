@@ -8,8 +8,8 @@ primarily for public data collection & trade execution. It is:
 * **Flexible**: Compatible with any protocol (WebSocket, FIX, Http, etc.), any input/output model, and any user defined transformations.
 
 Core abstractions include:
+- **RestClient** providing configurable signed Http communication between client & server.
 - **ExchangeStream** providing configurable communication over any asynchronous stream protocols (WebSocket, FIX, etc.).
-- **RestClient** providing configurable signed Http communication between client & server.  
 
 Both core abstractions provide the robust glue you need to conveniently translate between server & client data models.
 
@@ -46,6 +46,13 @@ Both core abstractions provide the robust glue you need to conveniently translat
 Barter-Integration is a high-performance, low-level, configurable framework for composing flexible web 
 integrations. 
 
+### RestClient
+**(sync private & public Http communication)**
+
+At a high level, a `RestClient` is has a few major components that allow it to execute `RestRequests`:
+* `RequestSigner` with configurable signing logic on the target API.
+* `HttpParser` that translates API specific responses into the desired output types.
+
 ### ExchangeStream
 **(async communication using streaming protocols such as WebSocket and FIX)**
 
@@ -55,65 +62,70 @@ At a high level, an `ExchangeStream` is made up of a few major components:
   specific messages.
 * Transformer that transforms from exchange specific message into an iterator of the desired outputs type.
 
-### RestClient
-**(sync private & public Http communication)**
-
-At a high level, a `RestClient` is has a few major components that allow it to execute `RestRequests`:
-* `RequestSigner` with configurable signing logic on the target API.
-* `HttpParser` that translates API specific responses into the desired output types.
-
 ## Examples
 
 #### Fetch Ftx Account Balances Using Signed GET request:
 ```rust,no_run
 use barter_integration::{
+    error::SocketError,
+    metric::Tag,
+    model::Symbol,
     protocol::http::{
-        HttpParser, private::{Signer, RequestSigner, encoder::HexEncoder},
-        rest::{RestRequest, client::RestClient},
+        private::{encoder::HexEncoder, RequestSigner, Signer},
+        rest::{client::RestClient, RestRequest},
+        HttpParser,
     },
-    error::SocketError, metric::Tag, model::Symbol,
 };
-use serde::Deserialize;
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
-use hmac::{
-    digest::KeyInit,
-    Hmac,
-};
+use hmac::{digest::KeyInit, Hmac};
 use reqwest::{RequestBuilder, StatusCode};
-use tokio::sync::mpsc;
+use serde::Deserialize;
 use thiserror::Error;
+use tokio::sync::mpsc;
 
-struct FtxSigner { api_key: String, }
+struct FtxSigner {
+    api_key: String,
+}
 
 // Configuration required to sign every Ftx `RestRequest`
-struct FtxSignConfig {
-    api_key: String,
+struct FtxSignConfig<'a> {
+    api_key: &'a str,
     time: DateTime<Utc>,
     method: reqwest::Method,
     path: &'static str,
 }
 
 impl Signer for FtxSigner {
-    type Config = FtxSignConfig;
+    type Config<'a> = FtxSignConfig<'a> where Self: 'a;
 
-    fn config<Request>(&self, _: Request, _: &RequestBuilder) -> Self::Config
-        where
-            Request: RestRequest
+    fn config<'a, Request>(
+        &'a self,
+        _: Request,
+        _: &RequestBuilder,
+    ) -> Result<Self::Config<'a>, SocketError>
+    where
+        Request: RestRequest,
     {
-        FtxSignConfig {
-            api_key: self.api_key.clone(),
+        Ok(FtxSignConfig {
+            api_key: self.api_key.as_str(),
             time: Utc::now(),
             method: Request::method(),
-            path: Request::path()
-        }
+            path: Request::path(),
+        })
     }
 
-    fn bytes_to_sign(config: &Self::Config) -> Result<Bytes, SocketError> {
-        Ok(Bytes::from(format!("{}{}{}", config.time, config.method, config.path)))
+    fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes {
+        Bytes::copy_from_slice(
+            format!("{}{}{}", config.time, config.method, config.path).as_bytes(),
+        )
     }
 
-    fn build_signed_request(config: Self::Config, builder: RequestBuilder, signature: String) -> Result<reqwest::Request, SocketError> {
+    fn build_signed_request<'a>(
+        config: Self::Config<'a>,
+        builder: RequestBuilder,
+        signature: String,
+    ) -> Result<reqwest::Request, SocketError> {
         // Add Ftx required Headers & build reqwest::Request
         builder
             .header("FTX-KEY", config.api_key)
@@ -127,23 +139,20 @@ impl Signer for FtxSigner {
 struct FtxParser;
 
 impl HttpParser for FtxParser {
-    type Error = ExecutionError;
+    type ApiError = serde_json::Value;
+    type OutputError = ExecutionError;
 
-    fn parse_api_error(&self, status: StatusCode, payload: &[u8]) -> Result<Self::Error, SocketError> {
-        // Deserialise Ftx API error
-        let error = serde_json::from_slice::<serde_json::Value>(payload)
-            .map(|response| response.to_string())
-            .map_err(|error| SocketError::DeserialiseBinary { error, payload: payload.to_vec()})?;
+    fn parse_api_error(&self, status: StatusCode, api_error: Self::ApiError) -> Self::OutputError {
+        // For simplicity, use serde_json::Value as Error and extract raw String for parsing
+        let error = api_error.to_string();
 
         // Parse Ftx error message to determine custom ExecutionError variant
-        Ok(match error.as_str() {
+        match error.as_str() {
             message if message.contains("Invalid login credentials") => {
                 ExecutionError::Unauthorised(error)
-            },
-            _ => {
-                ExecutionError::Socket(SocketError::HttpResponse(status, error))
             }
-        })
+            _ => ExecutionError::Socket(SocketError::HttpResponse(status, error)),
+        }
     }
 }
 
@@ -153,15 +162,15 @@ enum ExecutionError {
     Unauthorised(String),
 
     #[error("SocketError: {0}")]
-    Socket(#[from] SocketError)
+    Socket(#[from] SocketError),
 }
 
 struct FetchBalancesRequest;
 
 impl RestRequest for FetchBalancesRequest {
-    type QueryParams = ();                  // FetchBalances does not require any QueryParams
-    type Body = ();                         // FetchBalances does not require any Body
-    type Response = FetchBalancesResponse;  // Define Response type
+    type Response = FetchBalancesResponse; // Define Response type
+    type QueryParams = (); // FetchBalances does not require any QueryParams
+    type Body = (); // FetchBalances does not require any Body
 
     fn path() -> &'static str {
         "/api/wallet/balances"
@@ -177,12 +186,14 @@ impl RestRequest for FetchBalancesRequest {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct FetchBalancesResponse {
     success: bool,
-    result: Vec<FtxBalance>
+    result: Vec<FtxBalance>,
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct FtxBalance {
     #[serde(rename = "coin")]
     symbol: Symbol,
@@ -201,23 +212,18 @@ async fn main() {
 
     // Build Ftx configured RequestSigner for signing http requests with hex encoding
     let request_singer = RequestSigner::new(
-        FtxSigner { api_key: "api_key".to_string()},
+        FtxSigner {
+            api_key: "api_key".to_string(),
+        },
         mac,
-        HexEncoder
+        HexEncoder,
     );
 
     // Build RestClient with Ftx configuration
-    let rest_client = RestClient::new(
-        "https://ftx.com",
-        http_metric_tx,
-        request_singer,
-        FtxParser
-    );
+    let rest_client = RestClient::new("https://ftx.com", http_metric_tx, request_singer, FtxParser);
 
     // Fetch Result<FetchBalancesResponse, ExecutionError>
-    let _response = rest_client
-        .execute(FetchBalancesRequest)
-        .await;
+    let _response = rest_client.execute(FetchBalancesRequest).await;
 }
 ```
 
