@@ -1,16 +1,18 @@
 # Barter-Integration
 
 High-performance, low-level framework for composing flexible web integrations. 
-Core abstractions include:
-- `ExchangeStream` providing configurable communication over any asynchronous stream protocols (WebSocket, FIX, etc.).
-- `RestClient` providing configurable signed Http communication between client & server.  
-
-Both core abstractions provide the robust glue you need to conveniently translate between server & client data models.
 
 Utilised by other [`Barter`] trading ecosystem crates to build robust financial exchange integrations,
 primarily for public data collection & trade execution. It is:
 * **Low-Level**: Translates raw data streams communicated over the web into any desired data model using arbitrary data transformations.
-* **Flexible**: Compatible with any protocol (WebSocket, FIX, Http, etc.), any input/output model, and any user defined transformations. 
+* **Flexible**: Compatible with any protocol (WebSocket, FIX, Http, etc.), any input/output model, and any user defined transformations.
+
+Core abstractions include:
+- **ExchangeStream** providing configurable communication over any asynchronous stream protocols (WebSocket, FIX, etc.).
+- **RestClient** providing configurable signed Http communication between client & server.  
+
+Both core abstractions provide the robust glue you need to conveniently translate between server & client data models.
+
 
 **See: [`Barter`], [`Barter-Data`] & [`Barter-Execution`]**
 
