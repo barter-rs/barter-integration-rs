@@ -2,12 +2,16 @@ use crate::SocketError;
 use serde::de::DeserializeOwned;
 
 /// Contains useful `WebSocket` type aliases and a default `WebSocket` implementation of a
-/// [`ProtocolParser`].
+/// [`StreamParser`].
 pub mod websocket;
 
-/// `ProtocolParser`s are capable of parsing the input messages from a given protocol (eg WebSocket,
-/// Financial Information eXchange, etc) and deserialising into an `Output`.
-pub trait ProtocolParser {
+/// Contains HTTP client capable of executing signed & unsigned requests, as well as an associated
+/// exchange oriented HTTP request.
+pub mod http;
+
+/// `StreamParser`s are capable of parsing the input messages from a given stream protocol
+/// (eg/ WebSocket, Financial Information eXchange (FIX), etc.) and deserialising into an `Output`.
+pub trait StreamParser {
     type Message;
     type Error;
 

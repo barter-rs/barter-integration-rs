@@ -1,4 +1,4 @@
-use crate::{error::SocketError, protocol::ProtocolParser};
+use crate::{error::SocketError, protocol::StreamParser};
 use serde::{
     de::DeserializeOwned,
     {Deserialize, Serialize},
@@ -31,11 +31,11 @@ pub type WsMessage = tokio_tungstenite::tungstenite::Message;
 /// Communicative type alias for a tungstenite [`WebSocket`] `Error`.
 pub type WsError = tokio_tungstenite::tungstenite::Error;
 
-/// Default [`ProtocolParser`] implementation for a [`WebSocket`].
+/// Default [`StreamParser`] implementation for a [`WebSocket`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct WebSocketParser;
 
-impl ProtocolParser for WebSocketParser {
+impl StreamParser for WebSocketParser {
     type Message = WsMessage;
     type Error = WsError;
 
@@ -74,7 +74,7 @@ where
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::Serde { error, payload }
+            SocketError::Deserialise { error, payload }
         }),
     )
 }
@@ -94,7 +94,7 @@ where
                 action = "returning Some(Err(err))",
                 "failed to deserialize WebSocket Message into domain specific Message"
             );
-            SocketError::Serde {
+            SocketError::Deserialise {
                 error,
                 payload: String::from_utf8(payload).unwrap_or_else(|x| x.to_string()),
             }

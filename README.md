@@ -1,13 +1,16 @@
 # Barter-Integration
 
-High-performance, low-level framework for composing flexible web integrations. The core Socket abstraction
-provides customisable communication over any asynchronous protocol (WebSocket, FIX, etc.), with built-in translation
-between server & client data models.
+High-performance, low-level framework for composing flexible web integrations. 
+Core abstractions include:
+- `ExchangeStream` providing configurable communication over any asynchronous stream protocols (WebSocket, FIX, etc.).
+- `RestClient` providing configurable signed Http communication between client & server.  
+
+Both core abstractions provide the robust glue you need to conveniently translate between server & client data models.
 
 Utilised by other [`Barter`] trading ecosystem crates to build robust financial exchange integrations,
 primarily for public data collection & trade execution. It is:
 * **Low-Level**: Translates raw data streams communicated over the web into any desired data model using arbitrary data transformations.
-* **Flexible**: Compatible with any protocol (WebSocket, FIX, etc.), any input/output model, and any user defined transformations. 
+* **Flexible**: Compatible with any protocol (WebSocket, FIX, Http, etc.), any input/output model, and any user defined transformations. 
 
 **See: [`Barter`], [`Barter-Data`] & [`Barter-Execution`]**
 
@@ -37,16 +40,186 @@ primarily for public data collection & trade execution. It is:
 [Chat]: https://discord.gg/wE7RqhnQMV
 
 ## Overview
-Barter-Integration is a high-performance, low-level framework for composing flexible web integrations. It presents an  
-extensible core abstraction called the ExchangeStream. At a high level, an ExchangeStream is made up of a few 
-major components:
-* Inner Stream/Sink (eg/ WebSocket, FIX socket, etc).
-* ProtocolParser that is capable of parsing input protocol messages (eg/ WebSocket, FIX, etc.) as exchange
-  specific message. 
-* Transformer that transforms from exchange specific message into an iterator of desired outputs.
 
-## Example
-Consume Binance Futures tick-by-tick Trades and calculate a rolling sum of volume.
+Barter-Integration is a high-performance, low-level, configurable framework for composing flexible web 
+integrations. 
+
+### ExchangeStream
+**(async communication using streaming protocols such as WebSocket and FIX)**
+
+At a high level, an `ExchangeStream` is made up of a few major components:
+* Inner Stream/Sink socket (eg/ WebSocket, FIX, etc).
+* StreamParser that is capable of parsing input protocol messages (eg/ WebSocket, FIX, etc.) as exchange
+  specific messages.
+* Transformer that transforms from exchange specific message into an iterator of the desired outputs type.
+
+### RestClient
+**(sync private & public Http communication)**
+
+At a high level, a `RestClient` is has a few major components that allow it to execute `RestRequests`:
+* `RequestSigner` with configurable signing logic on the target API.
+* `HttpParser` that translates API specific responses into the desired output types.
+
+## Examples
+
+#### Fetch Ftx Account Balances Using Signed GET request:
+```rust,no_run
+use barter_integration::{
+    protocol::http::{
+        HttpParser, private::{Signer, RequestSigner, encoder::HexEncoder},
+        rest::{RestRequest, client::RestClient},
+    },
+    error::SocketError, metric::Tag, model::Symbol,
+};
+use serde::Deserialize;
+use bytes::Bytes;
+use chrono::{DateTime, Utc};
+use hmac::{
+    digest::KeyInit,
+    Hmac,
+};
+use reqwest::{RequestBuilder, StatusCode};
+use tokio::sync::mpsc;
+use thiserror::Error;
+
+struct FtxSigner { api_key: String, }
+
+// Configuration required to sign every Ftx `RestRequest`
+struct FtxSignConfig {
+    api_key: String,
+    time: DateTime<Utc>,
+    method: reqwest::Method,
+    path: &'static str,
+}
+
+impl Signer for FtxSigner {
+    type Config = FtxSignConfig;
+
+    fn config<Request>(&self, _: Request, _: &RequestBuilder) -> Self::Config
+        where
+            Request: RestRequest
+    {
+        FtxSignConfig {
+            api_key: self.api_key.clone(),
+            time: Utc::now(),
+            method: Request::method(),
+            path: Request::path()
+        }
+    }
+
+    fn bytes_to_sign(config: &Self::Config) -> Result<Bytes, SocketError> {
+        Ok(Bytes::from(format!("{}{}{}", config.time, config.method, config.path)))
+    }
+
+    fn build_signed_request(config: Self::Config, builder: RequestBuilder, signature: String) -> Result<reqwest::Request, SocketError> {
+        // Add Ftx required Headers & build reqwest::Request
+        builder
+            .header("FTX-KEY", config.api_key)
+            .header("FTX-TS", &config.time.timestamp_millis().to_string())
+            .header("FTX-SIGN", &signature)
+            .build()
+            .map_err(SocketError::from)
+    }
+}
+
+struct FtxParser;
+
+impl HttpParser for FtxParser {
+    type Error = ExecutionError;
+
+    fn parse_api_error(&self, status: StatusCode, payload: &[u8]) -> Result<Self::Error, SocketError> {
+        // Deserialise Ftx API error
+        let error = serde_json::from_slice::<serde_json::Value>(payload)
+            .map(|response| response.to_string())
+            .map_err(|error| SocketError::DeserialiseBinary { error, payload: payload.to_vec()})?;
+
+        // Parse Ftx error message to determine custom ExecutionError variant
+        Ok(match error.as_str() {
+            message if message.contains("Invalid login credentials") => {
+                ExecutionError::Unauthorised(error)
+            },
+            _ => {
+                ExecutionError::Socket(SocketError::HttpResponse(status, error))
+            }
+        })
+    }
+}
+
+#[derive(Debug, Error)]
+enum ExecutionError {
+    #[error("request authorisation invalid: {0}")]
+    Unauthorised(String),
+
+    #[error("SocketError: {0}")]
+    Socket(#[from] SocketError)
+}
+
+struct FetchBalancesRequest;
+
+impl RestRequest for FetchBalancesRequest {
+    type QueryParams = ();                  // FetchBalances does not require any QueryParams
+    type Body = ();                         // FetchBalances does not require any Body
+    type Response = FetchBalancesResponse;  // Define Response type
+
+    fn path() -> &'static str {
+        "/api/wallet/balances"
+    }
+
+    fn method() -> reqwest::Method {
+        reqwest::Method::GET
+    }
+
+    fn metric_tag() -> Tag {
+        Tag::new("method", "fetch_balances")
+    }
+}
+
+#[derive(Deserialize)]
+struct FetchBalancesResponse {
+    success: bool,
+    result: Vec<FtxBalance>
+}
+
+#[derive(Deserialize)]
+struct FtxBalance {
+    #[serde(rename = "coin")]
+    symbol: Symbol,
+    total: f64,
+}
+
+/// See Barter-Execution for a comprehensive real-life example, as well as code you can use out of the
+/// box to execute trades on many exchanges.
+#[tokio::main]
+async fn main() {
+    // Construct Metric channel to send Http execution metrics over
+    let (http_metric_tx, _http_metric_rx) = mpsc::unbounded_channel();
+
+    // HMAC-SHA256 encoded account API secret used for signing private http requests
+    let mac: Hmac<sha2::Sha256> = Hmac::new_from_slice("api_secret".as_bytes()).unwrap();
+
+    // Build Ftx configured RequestSigner for signing http requests with hex encoding
+    let request_singer = RequestSigner::new(
+        FtxSigner { api_key: "api_key".to_string()},
+        mac,
+        HexEncoder
+    );
+
+    // Build RestClient with Ftx configuration
+    let rest_client = RestClient::new(
+        "https://ftx.com",
+        http_metric_tx,
+        request_singer,
+        FtxParser
+    );
+
+    // Fetch Result<FetchBalancesResponse, ExecutionError>
+    let _response = rest_client
+        .execute(FetchBalancesRequest)
+        .await;
+}
+```
+
+#### Consume Binance Futures tick-by-tick Trades and calculate a rolling sum of volume:
 
 ```rust,no_run
 use barter_integration::{
@@ -127,7 +300,7 @@ async fn main() {
     // Instantiate some arbitrary Transformer to apply to data parsed from the WebSocket protocol
     let transformer = StatefulTransformer { sum_of_volume: 0.0 };
 
-    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket ProtocolParser
+    // ExchangeWsStream includes pre-defined WebSocket Sink/Stream & WebSocket StreamParser
     let mut ws_stream = ExchangeWsStream::new(binance_conn, transformer);
 
     // Receive a stream of your desired Output data model from the ExchangeStream
@@ -175,7 +348,7 @@ In addition to the Barter-Integration crate, the Barter project also maintains:
 * [`Barter-Execution`]: Financial exchange integrations for trade execution - yet to be released!
 
 ## Roadmap
-* Add new default ProtocolParser implementations to enable integration with other popular systems such as Kafka. 
+* Add new default StreamParser implementations to enable integration with other popular systems such as Kafka. 
 
 ## Licence
 This project is licensed under the [MIT license].
