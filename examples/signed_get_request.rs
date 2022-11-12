@@ -21,37 +21,40 @@ struct FtxSigner {
 }
 
 // Configuration required to sign every Ftx `RestRequest`
-struct FtxSignConfig {
-    api_key: String,
+struct FtxSignConfig<'a> {
+    api_key: &'a str,
     time: DateTime<Utc>,
     method: reqwest::Method,
     path: &'static str,
 }
 
 impl Signer for FtxSigner {
-    type Config = FtxSignConfig;
+    type Config<'a> = FtxSignConfig<'a> where Self: 'a;
 
-    fn config<Request>(&self, _: Request, _: &RequestBuilder) -> Self::Config
+    fn config<'a, Request>(
+        &'a self,
+        _: Request,
+        _: &RequestBuilder,
+    ) -> Result<Self::Config<'a>, SocketError>
     where
         Request: RestRequest,
     {
-        FtxSignConfig {
-            api_key: self.api_key.clone(),
+        Ok(FtxSignConfig {
+            api_key: self.api_key.as_str(),
             time: Utc::now(),
             method: Request::method(),
             path: Request::path(),
-        }
+        })
     }
 
-    fn bytes_to_sign(config: &Self::Config) -> Result<Bytes, SocketError> {
-        Ok(Bytes::from(format!(
-            "{}{}{}",
-            config.time, config.method, config.path
-        )))
+    fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes {
+        Bytes::copy_from_slice(
+            format!("{}{}{}", config.time, config.method, config.path).as_bytes(),
+        )
     }
 
-    fn build_signed_request(
-        config: Self::Config,
+    fn build_signed_request<'a>(
+        config: Self::Config<'a>,
         builder: RequestBuilder,
         signature: String,
     ) -> Result<reqwest::Request, SocketError> {
@@ -68,28 +71,20 @@ impl Signer for FtxSigner {
 struct FtxParser;
 
 impl HttpParser for FtxParser {
-    type Error = ExecutionError;
+    type ApiError = serde_json::Value;
+    type OutputError = ExecutionError;
 
-    fn parse_api_error(
-        &self,
-        status: StatusCode,
-        payload: &[u8],
-    ) -> Result<Self::Error, SocketError> {
-        // Deserialise Ftx API error
-        let error = serde_json::from_slice::<serde_json::Value>(payload)
-            .map(|response| response.to_string())
-            .map_err(|error| SocketError::DeserialiseBinary {
-                error,
-                payload: payload.to_vec(),
-            })?;
+    fn parse_api_error(&self, status: StatusCode, api_error: Self::ApiError) -> Self::OutputError {
+        // For simplicity, use serde_json::Value as Error and extract raw String for parsing
+        let error = api_error.to_string();
 
         // Parse Ftx error message to determine custom ExecutionError variant
-        Ok(match error.as_str() {
+        match error.as_str() {
             message if message.contains("Invalid login credentials") => {
                 ExecutionError::Unauthorised(error)
             }
             _ => ExecutionError::Socket(SocketError::HttpResponse(status, error)),
-        })
+        }
     }
 }
 
@@ -105,9 +100,9 @@ enum ExecutionError {
 struct FetchBalancesRequest;
 
 impl RestRequest for FetchBalancesRequest {
+    type Response = FetchBalancesResponse; // Define Response type
     type QueryParams = (); // FetchBalances does not require any QueryParams
     type Body = (); // FetchBalances does not require any Body
-    type Response = FetchBalancesResponse; // Define Response type
 
     fn path() -> &'static str {
         "/api/wallet/balances"
