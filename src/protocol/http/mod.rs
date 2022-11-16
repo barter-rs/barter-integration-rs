@@ -28,7 +28,11 @@ pub trait BuildStrategy {
     /// that is ready for executing.
     ///
     /// It is expected that any [`reqwest::Header`]s or signing is performed during this method.
-    fn build<Request>(&self, request: Request, builder: reqwest::RequestBuilder) -> Result<reqwest::Request, SocketError>
+    fn build<Request>(
+        &self,
+        request: Request,
+        builder: reqwest::RequestBuilder,
+    ) -> Result<reqwest::Request, SocketError>
     where
         Request: RestRequest;
 }

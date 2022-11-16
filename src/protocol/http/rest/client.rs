@@ -1,10 +1,7 @@
 use crate::{
     error::SocketError,
     metric::{Field, Metric, Tag},
-    protocol::http::{
-        rest::RestRequest,
-        BuildStrategy, HttpParser,
-    },
+    protocol::http::{rest::RestRequest, BuildStrategy, HttpParser},
 };
 use bytes::Bytes;
 use chrono::Utc;
@@ -86,8 +83,7 @@ where
         }
 
         // Use RequestBuilder (public or private strategy) to build reqwest::Request
-        self.strategy
-            .build(request, builder)
+        self.strategy.build(request, builder)
     }
 
     /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].

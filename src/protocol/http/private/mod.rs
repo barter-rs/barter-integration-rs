@@ -1,8 +1,5 @@
 use self::encoder::Encoder;
-use super::{
-    BuildStrategy,
-    rest::RestRequest
-};
+use super::{rest::RestRequest, BuildStrategy};
 use crate::error::SocketError;
 use bytes::Bytes;
 use hmac::Mac;
@@ -94,9 +91,13 @@ where
     Hmac: Mac + Clone,
     SigEncoder: Encoder,
 {
-    fn build<Request>(&self, request: Request, builder: reqwest::RequestBuilder) -> Result<reqwest::Request, SocketError>
+    fn build<Request>(
+        &self,
+        request: Request,
+        builder: reqwest::RequestBuilder,
+    ) -> Result<reqwest::Request, SocketError>
     where
-        Request: RestRequest
+        Request: RestRequest,
     {
         // Build configuration required for generating signed requests
         let config = self.signer.config(request, &builder)?;
