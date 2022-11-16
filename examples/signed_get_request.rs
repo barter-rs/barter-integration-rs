@@ -143,7 +143,7 @@ async fn main() {
     let mac: Hmac<sha2::Sha256> = Hmac::new_from_slice("api_secret".as_bytes()).unwrap();
 
     // Build Ftx configured RequestSigner for signing http requests with hex encoding
-    let request_singer = RequestSigner::new(
+    let request_signer = RequestSigner::new(
         FtxSigner {
             api_key: "api_key".to_string(),
         },
@@ -152,7 +152,7 @@ async fn main() {
     );
 
     // Build RestClient with Ftx configuration
-    let rest_client = RestClient::new("https://ftx.com", http_metric_tx, request_singer, FtxParser);
+    let rest_client = RestClient::new("https://ftx.com", http_metric_tx, request_signer, FtxParser);
 
     // Fetch Result<FetchBalancesResponse, ExecutionError>
     let _response = rest_client.execute(FetchBalancesRequest).await;
