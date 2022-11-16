@@ -1,3 +1,4 @@
+use self::rest::RestRequest;
 use crate::error::SocketError;
 use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
@@ -10,6 +11,27 @@ pub mod rest;
 /// Defines a configurable [`RequestSigner`](private::RequestSigner) that signs Http
 /// [`RestRequest`](rest::RestRequest) using API specific logic.
 pub mod private;
+
+/// Defines a default [`RequestStrategy`] that builds a non-authenticated Http
+/// [`RestRequest`](rest::RestRequest) with no headers.
+pub mod public;
+
+/// [`RestRequest`] build strategy for the API being interacted with.
+///
+/// An API that requires authenticated [`RestRequest`]s will likely utilise the configurable
+/// [`RequestSigner`] to sign the requests before building.
+///
+/// An API that requires no authentication may just add mandatory [`reqwest::Header`]s to the
+/// [`RestRequest`] before building.
+pub trait BuildStrategy {
+    /// Use a [`RestRequest`] and [`reqwest::RequestBuilder`] to construct a [`reqwest::Request`]
+    /// that is ready for executing.
+    ///
+    /// It is expected that any [`reqwest::Header`]s or signing is performed during this method.
+    fn build<Request>(&self, request: Request, builder: reqwest::RequestBuilder) -> Result<reqwest::Request, SocketError>
+    where
+        Request: RestRequest;
+}
 
 /// Utilised by a [`RestClient`](rest::client::RestClient) to deserialise
 /// [`RestRequest::Response`](rest::RestRequest::Response), and upon failure parses API errors

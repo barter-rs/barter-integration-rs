@@ -40,6 +40,9 @@ pub mod metric;
 /// Utilities to assist deserialisation.
 pub mod de;
 
+
+pub mod http_stream;
+
 /// [`Validator`]s are capable of determining if their internal state is satisfactory to fulfill
 /// some use case defined by the implementor.
 pub trait Validator {

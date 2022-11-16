@@ -15,9 +15,7 @@ pub trait StreamParser {
     type Message;
     type Error;
 
-    fn parse<Output>(
-        input: Result<Self::Message, Self::Error>,
-    ) -> Option<Result<Output, SocketError>>
+    fn parse<Output>(input: Result<Self::Message, Self::Error>) -> Option<Result<Output, SocketError>>
     where
         Output: DeserializeOwned;
 }

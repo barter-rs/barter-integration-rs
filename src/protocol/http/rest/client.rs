@@ -2,15 +2,12 @@ use crate::{
     error::SocketError,
     metric::{Field, Metric, Tag},
     protocol::http::{
-        private::{encoder::Encoder, RequestSigner, Signer},
         rest::RestRequest,
-        HttpParser,
+        BuildStrategy, HttpParser,
     },
 };
 use bytes::Bytes;
 use chrono::Utc;
-use hmac::Mac;
-use reqwest::StatusCode;
 use tokio::sync::mpsc;
 use tracing::warn;
 
@@ -18,7 +15,7 @@ use tracing::warn;
 /// integrating APIs that require Http in order to interact with resources. Each API will require
 /// a specific combination of [`Signer`], [`Mac`], signature [`Encoder`], and [`Parser`].
 #[derive(Debug)]
-pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
+pub struct RestClient<'a, Strategy, Parser> {
     /// HTTP [`reqwest::Client`] for executing signed [`reqwest::Request`]s.
     pub http_client: reqwest::Client,
 
@@ -28,20 +25,22 @@ pub struct RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
     /// [`Metric`] transmitter for sending observed execution measurements to an external receiver.
     pub metric_tx: mpsc::UnboundedSender<Metric>,
 
-    /// [`RestRequest`] signer utilising API specific [`Signer`] logic, a hashable [`Mac`], and a
-    /// signature [`Encoder`].
-    pub signer: RequestSigner<Sig, Hmac, SigEncoder>,
+    /// [`RestRequest`] build strategy for the API being interacted with that implements
+    /// [`BuildStrategy`].
+    ///
+    /// An authenticated [`RestClient`] will utilise API specific [`signer`] logic, a hashable
+    /// [`Mac`], and a signature [`Encoder`]. Where as a non authorised [`RestRequest`] may just
+    /// add mandatory [`reqwest::Header`]s.
+    pub strategy: Strategy,
 
     /// [`HttpParser`] that deserialises [`RestRequest::Response`]s, and upon failure parses
     /// API errors returned from the server.
     pub parser: Parser,
 }
 
-impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Parser>
+impl<'a, Strategy, Parser> RestClient<'a, Strategy, Parser>
 where
-    Sig: Signer,
-    Hmac: Mac + Clone,
-    SigEncoder: Encoder,
+    Strategy: BuildStrategy,
     Parser: HttpParser,
 {
     /// Execute the provided [`RestRequest`].
@@ -86,8 +85,9 @@ where
             builder = builder.json(body);
         }
 
-        // Build signed reqwest::Request
-        self.signer.sign(request, builder)
+        // Use RequestBuilder (public or private strategy) to build reqwest::Request
+        self.strategy
+            .build(request, builder)
     }
 
     /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].
@@ -97,7 +97,7 @@ where
     pub async fn measured_execution<Request>(
         &self,
         request: reqwest::Request,
-    ) -> Result<(StatusCode, Bytes), SocketError>
+    ) -> Result<(reqwest::StatusCode, Bytes), SocketError>
     where
         Request: RestRequest,
     {
@@ -131,19 +131,19 @@ where
     }
 }
 
-impl<'a, Sig, Hmac, SigEncoder, Parser> RestClient<'a, Sig, Hmac, SigEncoder, Parser> {
+impl<'a, Strategy, Parser> RestClient<'a, Strategy, Parser> {
     /// Construct a new [`Self`] using the provided configuration.
     pub fn new(
         base_url: &'a str,
         metric_tx: mpsc::UnboundedSender<Metric>,
-        signer: RequestSigner<Sig, Hmac, SigEncoder>,
+        strategy: Strategy,
         parser: Parser,
     ) -> Self {
         Self {
             http_client: reqwest::Client::new(),
             base_url,
             metric_tx,
-            signer,
+            strategy,
             parser,
         }
     }
