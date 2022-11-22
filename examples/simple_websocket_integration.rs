@@ -33,8 +33,9 @@ struct StatefulTransformer {
     sum_of_volume: VolumeSum,
 }
 
-impl Transformer<VolumeSum> for StatefulTransformer {
+impl Transformer for StatefulTransformer {
     type Input = BinanceMessage;
+    type Output = VolumeSum;
     type OutputIter = Vec<Result<VolumeSum, SocketError>>;
 
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter {

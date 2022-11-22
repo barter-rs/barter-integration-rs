@@ -51,9 +51,10 @@ pub trait Validator {
 
 /// [`Transformer`]s are capable of transforming any `Input` into an iterator of
 /// `Result<Output, SocketError>`s.
-pub trait Transformer<Output> {
+pub trait Transformer {
     type Input: DeserializeOwned;
-    type OutputIter: IntoIterator<Item = Result<Output, SocketError>>;
+    type Output;
+    type OutputIter: IntoIterator<Item = Result<Self::Output, SocketError>>;
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter;
 }
 
@@ -73,7 +74,7 @@ pub struct ExchangeStream<Protocol, InnerStream, StreamTransformer, Output>
 where
     Protocol: StreamParser,
     InnerStream: Stream,
-    StreamTransformer: Transformer<Output>,
+    StreamTransformer: Transformer,
     Output: Debug,
 {
     #[pin]
@@ -89,11 +90,11 @@ impl<Protocol, InnerStream, StreamTransformer, ExchangeMessage, Output> Stream
 where
     Protocol: StreamParser,
     InnerStream: Stream<Item = Result<Protocol::Message, Protocol::Error>> + Unpin,
-    StreamTransformer: Transformer<Output, Input = ExchangeMessage>,
+    StreamTransformer: Transformer<Input = ExchangeMessage, Output = Output>,
     ExchangeMessage: DeserializeOwned,
     Output: Debug,
 {
-    type Item = Result<Event<Output>, SocketError>;
+    type Item = Result<Event<StreamTransformer::Output>, SocketError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
@@ -126,7 +127,7 @@ where
             self.transformer
                 .transform(exchange_message)
                 .into_iter()
-                .for_each(|output: Result<Output, SocketError>| {
+                .for_each(|output: Result<StreamTransformer::Output, SocketError>| {
                     // Augment `Output` with monotonically increasing sequence number & received timestamp
                     let event = output.map(|output| {
                         let sequence = self.sequence;
@@ -148,7 +149,7 @@ impl<Protocol, InnerStream, StreamTransformer, Output>
 where
     Protocol: StreamParser,
     InnerStream: Stream,
-    StreamTransformer: Transformer<Output>,
+    StreamTransformer: Transformer,
     Output: Debug,
 {
     pub fn new(stream: InnerStream, transformer: StreamTransformer) -> Self {
@@ -171,7 +172,7 @@ where
     // Todo: may not be Protocol::Message
     InnerSink: Sink<Protocol::Message>,
     // Todo: Transformer may need to be double generic or have a Transformer and a Sink/StreamTransformer that's associated
-    SinkTransformer: Transformer<Output>,
+    SinkTransformer: Transformer,
     Output: Debug,
 {
     #[pin]
@@ -187,7 +188,7 @@ impl<Protocol, InnerSink, SinkTransformer, Output> Sink<Protocol::Message>
 where
     Protocol: StreamParser,
     InnerSink: Sink<Protocol::Message>,
-    SinkTransformer: Transformer<Output>,
+    SinkTransformer: Transformer,
     Output: Debug,
 {
     type Error = SocketError;
@@ -226,7 +227,7 @@ impl<Protocol, InnerSink, SinkTransformer, Output>
 where
     Protocol: StreamParser,
     InnerSink: Sink<Protocol::Message>,
-    SinkTransformer: Transformer<Output>,
+    SinkTransformer: Transformer,
     Output: Debug,
 {
     pub fn new(sink: InnerSink, transformer: SinkTransformer) -> Self {
