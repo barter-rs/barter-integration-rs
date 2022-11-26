@@ -36,6 +36,7 @@ pub type WsError = tokio_tungstenite::tungstenite::Error;
 pub struct WebSocketParser;
 
 impl StreamParser for WebSocketParser {
+    type Stream = WebSocket;
     type Message = WsMessage;
     type Error = WsError;
 

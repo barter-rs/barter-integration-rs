@@ -1,3 +1,4 @@
+use futures::Stream;
 use crate::SocketError;
 use serde::de::DeserializeOwned;
 
@@ -12,6 +13,7 @@ pub mod http;
 /// `StreamParser`s are capable of parsing the input messages from a given stream protocol
 /// (eg/ WebSocket, Financial Information eXchange (FIX), etc.) and deserialising into an `Output`.
 pub trait StreamParser {
+    type Stream: Stream;
     type Message;
     type Error;
 
