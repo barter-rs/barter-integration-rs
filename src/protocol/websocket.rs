@@ -14,7 +14,7 @@ use tokio_tungstenite::{
     },
     MaybeTlsStream,
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace};
 
 /// Convenient type alias for a tungstenite `WebSocketStream`.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -69,7 +69,7 @@ where
 {
     Some(
         serde_json::from_str::<ExchangeMessage>(&payload).map_err(|error| {
-            warn!(
+            debug!(
                 ?error,
                 ?payload,
                 action = "returning Some(Err(err))",
@@ -89,7 +89,7 @@ where
 {
     Some(
         serde_json::from_slice::<ExchangeMessage>(&payload).map_err(|error| {
-            warn!(
+            debug!(
                 ?error,
                 ?payload,
                 action = "returning Some(Err(err))",
@@ -133,7 +133,7 @@ pub fn process_frame<ExchangeMessage>(
     frame: Frame,
 ) -> Option<Result<ExchangeMessage, SocketError>> {
     let frame = format!("{:?}", frame);
-    warn!(payload = %frame, "received unexpected Frame WebSocket message");
+    debug!(payload = %frame, "received unexpected Frame WebSocket message");
     None
 }
 

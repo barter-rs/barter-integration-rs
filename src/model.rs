@@ -98,7 +98,7 @@ impl MarketId {
 
 /// Barter representation of an [`Exchange`]'s name.
 ///
-/// eg/ Exchange("binance"), Exchange("bitfinex"), Exchange("ftx"), etc.
+/// eg/ Exchange("binance_spot"), Exchange("bitfinex"), Exchange("gateio_spot"), etc.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct Exchange(Cow<'static, str>);
 
@@ -326,9 +326,9 @@ mod tests {
             },
             TestCase {
                 // TC1: Valid Ftx btc_usd FuturePerpetual Market
-                input: r##"{ "exchange": "ftx", "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
+                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
                 expected: Ok(Market {
-                    exchange: Exchange::from("ftx"),
+                    exchange: Exchange::from("ftx_old"),
                     instrument: Instrument::from(("btc", "usd", InstrumentKind::FuturePerpetual)),
                 }),
             },
