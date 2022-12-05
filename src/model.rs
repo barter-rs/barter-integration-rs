@@ -258,7 +258,7 @@ impl Symbol {
 ///
 /// eg/ [`SubscriptionId`] of an `FtxTrade` is "{BASE}/{QUOTE}" (ie/ market).
 /// eg/ [`SubscriptionId`] of a `BinanceTrade` is "{base}{symbol}@trade" (ie/ channel).
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct SubscriptionId(pub String);
 
 impl Debug for SubscriptionId {
@@ -276,12 +276,6 @@ impl Display for SubscriptionId {
 impl AsRef<str> for SubscriptionId {
     fn as_ref(&self) -> &str {
         &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for SubscriptionId {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        String::deserialize(deserializer).map(SubscriptionId)
     }
 }
 
