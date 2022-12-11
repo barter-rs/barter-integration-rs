@@ -13,7 +13,7 @@ where
     T: std::str::FromStr,
     T::Err: std::fmt::Display,
 {
-    let data: String = serde::de::Deserialize::deserialize(deserializer)?;
+    let data: &str = serde::de::Deserialize::deserialize(deserializer)?;
     data.parse::<T>().map_err(serde::de::Error::custom)
 }
 
