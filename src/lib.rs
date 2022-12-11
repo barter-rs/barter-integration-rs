@@ -62,28 +62,26 @@ pub trait Transformer {
 /// messages from the inner [`Stream`], and transforms them into the desired output data structure.
 #[derive(Debug)]
 #[pin_project]
-pub struct ExchangeStream<Protocol, InnerStream, StreamTransformer, Output>
+pub struct ExchangeStream<Protocol, InnerStream, StreamTransformer>
 where
     Protocol: StreamParser,
     InnerStream: Stream,
     StreamTransformer: Transformer,
-    Output: Debug,
 {
     #[pin]
     pub stream: InnerStream,
     pub transformer: StreamTransformer,
-    pub buffer: VecDeque<Result<Output, SocketError>>,
+    pub buffer: VecDeque<Result<StreamTransformer::Output, SocketError>>,
     pub protocol_marker: PhantomData<Protocol>,
 }
 
-impl<Protocol, InnerStream, StreamTransformer, ExchangeMessage, Output> Stream
-    for ExchangeStream<Protocol, InnerStream, StreamTransformer, Output>
+impl<Protocol, InnerStream, StreamTransformer, ExchangeMessage> Stream
+    for ExchangeStream<Protocol, InnerStream, StreamTransformer>
 where
     Protocol: StreamParser,
     InnerStream: Stream<Item = Result<Protocol::Message, Protocol::Error>> + Unpin,
-    StreamTransformer: Transformer<Input = ExchangeMessage, Output = Output>,
+    StreamTransformer: Transformer<Input = ExchangeMessage>,
     ExchangeMessage: DeserializeOwned,
-    Output: Debug,
 {
     type Item = Result<StreamTransformer::Output, SocketError>;
 
@@ -125,13 +123,11 @@ where
     }
 }
 
-impl<Protocol, InnerStream, StreamTransformer, Output>
-    ExchangeStream<Protocol, InnerStream, StreamTransformer, Output>
+impl<Protocol, InnerStream, StreamTransformer> ExchangeStream<Protocol, InnerStream, StreamTransformer>
 where
     Protocol: StreamParser,
     InnerStream: Stream,
     StreamTransformer: Transformer,
-    Output: Debug,
 {
     pub fn new(stream: InnerStream, transformer: StreamTransformer) -> Self {
         Self {

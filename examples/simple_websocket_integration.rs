@@ -11,7 +11,7 @@ use tokio_tungstenite::connect_async;
 use tracing::debug;
 
 // Convenient type alias for an `ExchangeStream` utilising a tungstenite `WebSocket`
-type ExchangeWsStream<Exchange> = ExchangeStream<WebSocketParser, WebSocket, Exchange, VolumeSum>;
+type ExchangeWsStream<Exchange> = ExchangeStream<WebSocketParser, WebSocket, Exchange>;
 
 // Communicative type alias for what the VolumeSum the Transformer is generating
 type VolumeSum = f64;
