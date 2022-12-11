@@ -297,6 +297,15 @@ pub enum Side {
     Sell,
 }
 
+impl Display for Side {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Side::Buy => "buy",
+            Side::Sell => "sell",
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
