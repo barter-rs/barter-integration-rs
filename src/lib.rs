@@ -118,7 +118,7 @@ where
                 Some(Err(err)) => return Poll::Ready(Some(Err(err))),
 
                 // If `StreamParser` returns None it's a safe-to-skip message
-                None => return Poll::Pending,
+                None => continue,
             };
 
             // Transform `ExchangeMessage` into `Transformer::OutputIter`
