@@ -14,7 +14,7 @@ use tokio_tungstenite::{
     },
     MaybeTlsStream,
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
 /// Convenient type alias for a tungstenite `WebSocketStream`.
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -106,7 +106,7 @@ where
 pub fn process_ping<ExchangeMessage>(
     ping: Vec<u8>,
 ) -> Option<Result<ExchangeMessage, SocketError>> {
-    trace!(payload = ?ping, "received Ping WebSocket message");
+    debug!(payload = ?ping, "received Ping WebSocket message");
     None
 }
 
@@ -114,7 +114,7 @@ pub fn process_ping<ExchangeMessage>(
 pub fn process_pong<ExchangeMessage>(
     pong: Vec<u8>,
 ) -> Option<Result<ExchangeMessage, SocketError>> {
-    trace!(payload = ?pong, "received Pong WebSocket message");
+    debug!(payload = ?pong, "received Pong WebSocket message");
     None
 }
 
