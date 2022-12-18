@@ -299,10 +299,14 @@ pub enum Side {
 
 impl Display for Side {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Side::Buy => "buy",
-            Side::Sell => "sell",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Side::Buy => "buy",
+                Side::Sell => "sell",
+            }
+        )
     }
 }
 

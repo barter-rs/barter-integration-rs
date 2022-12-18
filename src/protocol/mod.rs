@@ -1,5 +1,5 @@
-use futures::Stream;
 use crate::SocketError;
+use futures::Stream;
 use serde::de::DeserializeOwned;
 
 /// Contains useful `WebSocket` type aliases and a default `WebSocket` implementation of a

@@ -1,4 +1,3 @@
-
 /// Determine the `DateTime<Utc>` from the provided `Duration` since the epoch.
 pub fn datetime_utc_from_epoch_duration(
     duration: std::time::Duration,
@@ -24,8 +23,9 @@ pub fn de_u64_epoch_ms_as_datetime_utc<'de, D>(
 where
     D: serde::de::Deserializer<'de>,
 {
-    serde::de::Deserialize::deserialize(deserializer)
-        .map(|epoch_ms| datetime_utc_from_epoch_duration(std::time::Duration::from_millis(epoch_ms)))
+    serde::de::Deserialize::deserialize(deserializer).map(|epoch_ms| {
+        datetime_utc_from_epoch_duration(std::time::Duration::from_millis(epoch_ms))
+    })
 }
 
 /// Deserialize a &str "u64" as `DateTime<Utc>`.
@@ -35,8 +35,9 @@ pub fn de_str_u64_epoch_ms_as_datetime_utc<'de, D>(
 where
     D: serde::de::Deserializer<'de>,
 {
-    de_str(deserializer)
-        .map(|epoch_ms| datetime_utc_from_epoch_duration(std::time::Duration::from_millis(epoch_ms)))
+    de_str(deserializer).map(|epoch_ms| {
+        datetime_utc_from_epoch_duration(std::time::Duration::from_millis(epoch_ms))
+    })
 }
 
 /// Deserialize a &str "f64" as `DateTime<Utc>`.

@@ -3,10 +3,10 @@
     missing_copy_implementations,
     rust_2018_idioms
 )]
-use crate::{
-    protocol::StreamParser,
-    error::SocketError
-};
+use crate::{error::SocketError, protocol::StreamParser};
+use futures::Stream;
+use pin_project::pin_project;
+use serde::Deserialize;
 use std::{
     collections::VecDeque,
     fmt::Debug,
@@ -14,9 +14,6 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use futures::Stream;
-use pin_project::pin_project;
-use serde::Deserialize;
 
 ///! # Barter-Integration
 ///! Contains an [`ExchangeStream`] capable of acting as a [`Stream`] for a given remote server, and a [`ExchangeSink`]
@@ -116,14 +113,17 @@ where
             self.transformer
                 .transform(exchange_message)
                 .into_iter()
-                .for_each(|output_result: Result<StreamTransformer::Output, SocketError>| {
-                    self.buffer.push_back(output_result)
-                });
+                .for_each(
+                    |output_result: Result<StreamTransformer::Output, SocketError>| {
+                        self.buffer.push_back(output_result)
+                    },
+                );
         }
     }
 }
 
-impl<Protocol, InnerStream, StreamTransformer> ExchangeStream<Protocol, InnerStream, StreamTransformer>
+impl<Protocol, InnerStream, StreamTransformer>
+    ExchangeStream<Protocol, InnerStream, StreamTransformer>
 where
     Protocol: StreamParser,
     InnerStream: Stream,
