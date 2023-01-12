@@ -20,7 +20,7 @@ tracing = "0.1.29"
 # SerDe
 serde = { version = "1.0.143", features = ["derive"] }
 serde_json = "1.0.83"
-serde_qs = "0.10.1"
+serde_qs = "0.11.0"
 
 # Error
 thiserror = "1.0.32"
