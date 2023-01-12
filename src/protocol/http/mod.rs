@@ -12,22 +12,23 @@ pub mod rest;
 /// [`RestRequest`](rest::RestRequest) using API specific logic.
 pub mod private;
 
-/// Defines a default [`RequestStrategy`] that builds a non-authenticated Http
+/// Defines a default [`BuildStrategy`] that builds a non-authenticated Http
 /// [`RestRequest`](rest::RestRequest) with no headers.
 pub mod public;
 
 /// [`RestRequest`] build strategy for the API being interacted with.
 ///
 /// An API that requires authenticated [`RestRequest`]s will likely utilise the configurable
-/// [`RequestSigner`] to sign the requests before building.
+/// [`RequestSigner`](private::RequestSigner) to sign the requests before building.
 ///
-/// An API that requires no authentication may just add mandatory [`reqwest::Header`]s to the
+/// An API that requires no authentication may just add mandatory `reqwest` headers to the
 /// [`RestRequest`] before building.
 pub trait BuildStrategy {
     /// Use a [`RestRequest`] and [`reqwest::RequestBuilder`] to construct a [`reqwest::Request`]
     /// that is ready for executing.
     ///
-    /// It is expected that any [`reqwest::Header`]s or signing is performed during this method.
+    /// It is expected that any signing or performed during this method, or the addition of any
+    /// `reqwest` headers.
     fn build<Request>(
         &self,
         request: Request,
@@ -81,6 +82,6 @@ pub trait HttpParser {
     }
 
     /// If [`parse`](Self::parse) fails to deserialise the `Ok(Response)`, this function parses
-    /// to parse the API [`Self::Error`] associated with the response.
+    /// to parse the API [`Self::ApiError`] associated with the response.
     fn parse_api_error(&self, status: StatusCode, error: Self::ApiError) -> Self::OutputError;
 }

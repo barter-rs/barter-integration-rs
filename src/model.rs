@@ -98,7 +98,7 @@ impl MarketId {
 
 /// Barter representation of an [`Exchange`]'s name.
 ///
-/// eg/ Exchange("binance"), Exchange("bitfinex"), Exchange("ftx"), etc.
+/// eg/ Exchange("binance_spot"), Exchange("bitfinex"), Exchange("gateio_spot"), etc.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct Exchange(Cow<'static, str>);
 
@@ -258,7 +258,7 @@ impl Symbol {
 ///
 /// eg/ [`SubscriptionId`] of an `FtxTrade` is "{BASE}/{QUOTE}" (ie/ market).
 /// eg/ [`SubscriptionId`] of a `BinanceTrade` is "{base}{symbol}@trade" (ie/ channel).
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct SubscriptionId(pub String);
 
 impl Debug for SubscriptionId {
@@ -279,12 +279,6 @@ impl AsRef<str> for SubscriptionId {
     }
 }
 
-impl<'de> Deserialize<'de> for SubscriptionId {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        String::deserialize(deserializer).map(SubscriptionId)
-    }
-}
-
 impl<S> From<S> for SubscriptionId
 where
     S: Into<String>,
@@ -301,6 +295,19 @@ pub enum Side {
     Buy,
     #[serde(alias = "sell", alias = "SELL", alias = "s")]
     Sell,
+}
+
+impl Display for Side {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Side::Buy => "buy",
+                Side::Sell => "sell",
+            }
+        )
+    }
 }
 
 #[cfg(test)]
@@ -326,9 +333,9 @@ mod tests {
             },
             TestCase {
                 // TC1: Valid Ftx btc_usd FuturePerpetual Market
-                input: r##"{ "exchange": "ftx", "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
+                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
                 expected: Ok(Market {
-                    exchange: Exchange::from("ftx"),
+                    exchange: Exchange::from("ftx_old"),
                     instrument: Instrument::from(("btc", "usd", InstrumentKind::FuturePerpetual)),
                 }),
             },

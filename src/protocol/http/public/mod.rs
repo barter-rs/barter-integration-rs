@@ -1,7 +1,7 @@
 use super::BuildStrategy;
 use crate::error::SocketError;
 
-/// [`RestRequest`] [`BuildStrategy`] that builds a non-authenticated Http request with no headers.
+/// [`RestRequest`](super::RestRequest) [`BuildStrategy`] that builds a non-authenticated Http request with no headers.
 #[derive(Debug, Copy, Clone)]
 pub struct PublicNoHeaders;
 

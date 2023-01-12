@@ -1,7 +1,7 @@
 [package]
 name = "barter-integration"
-version = "0.4.1"
-authors = ["keirbailey <keirinvestment@gmail.com>"]
+version = "0.5.0"
+authors = ["JustAStream"]
 edition = "2021"
 license = "MIT"
 documentation = "https://docs.rs/barter-integration/"
@@ -20,7 +20,7 @@ tracing = "0.1.29"
 # SerDe
 serde = { version = "1.0.143", features = ["derive"] }
 serde_json = "1.0.83"
-serde_qs = "0.10.1"
+serde_qs = "0.11.0"
 
 # Error
 thiserror = "1.0.32"
@@ -32,7 +32,7 @@ async-trait = "0.1.57"
 pin-project = "1.0.11"
 
 # Protocol
-tokio-tungstenite = { version = "0.17.2", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.18.0", features = ["rustls-tls-webpki-roots"] }
 reqwest = { version = "0.11.12", features = ["json"] }
 url = "2.3.1"
 

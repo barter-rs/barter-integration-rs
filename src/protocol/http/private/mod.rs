@@ -8,13 +8,15 @@ use hmac::Mac;
 pub mod encoder;
 
 /// API specific signing logic used by a [`RequestSigner`].
+#[allow(clippy::needless_lifetimes)]
 pub trait Signer {
     /// Configuration required to sign the [`RestRequest`]s for this API server.
     type Config<'a>
     where
         Self: 'a;
 
-    /// Generates a [`Self::Config`] for this [`RestRequest`] and [`RequestBuilder`].
+    /// Generates a [`Self::Config`] for this [`RestRequest`] and
+    /// [`RequestBuilder`](reqwest::RequestBuilder).
     ///
     /// # Examples
     ///
@@ -52,8 +54,8 @@ pub trait Signer {
     /// ```
     fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes;
 
-    /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`], [`RequestBuilder`],
-    /// and generated cryptographic signature `String`.
+    /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`],
+    /// [`RequestBuilder`](reqwest::RequestBuilder), and generated cryptographic signature `String`.
     ///
     /// # Examples
     ///

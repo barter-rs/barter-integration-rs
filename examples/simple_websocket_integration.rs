@@ -11,7 +11,7 @@ use tokio_tungstenite::connect_async;
 use tracing::debug;
 
 // Convenient type alias for an `ExchangeStream` utilising a tungstenite `WebSocket`
-type ExchangeWsStream<Exchange> = ExchangeStream<WebSocketParser, WebSocket, Exchange, VolumeSum>;
+type ExchangeWsStream<Exchange> = ExchangeStream<WebSocketParser, WebSocket, Exchange>;
 
 // Communicative type alias for what the VolumeSum the Transformer is generating
 type VolumeSum = f64;
@@ -33,9 +33,11 @@ struct StatefulTransformer {
     sum_of_volume: VolumeSum,
 }
 
-impl Transformer<VolumeSum> for StatefulTransformer {
+impl Transformer for StatefulTransformer {
+    type Error = SocketError;
     type Input = BinanceMessage;
-    type OutputIter = Vec<Result<VolumeSum, SocketError>>;
+    type Output = VolumeSum;
+    type OutputIter = Vec<Result<Self::Output, Self::Error>>;
 
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter {
         // Add new input Trade quantity to sum

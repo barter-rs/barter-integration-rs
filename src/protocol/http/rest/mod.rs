@@ -9,7 +9,7 @@ pub mod client;
 /// Default Http [`reqwest::Request`] timeout Duration.
 const DEFAULT_HTTP_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Http REST request that can be executed by a [`RestClient`].
+/// Http REST request that can be executed by a [`RestClient`](self::client::RestClient).
 pub trait RestRequest {
     /// Expected response type if this request was successful.
     type Response: DeserializeOwned;
@@ -20,13 +20,13 @@ pub trait RestRequest {
     /// Serialisable Body type - use unit struct () if not required for this request.
     type Body: Serialize;
 
-    /// Additional [`Url`] path to the resource.
+    /// Additional [`Url`](url::Url) path to the resource.
     fn path() -> &'static str;
 
     /// Http [`reqwest::Method`] of this request.
     fn method() -> reqwest::Method;
 
-    /// [`Metric`] [`Tag`] that identifies this request.
+    /// [`Metric`](crate::metric::Metric) [`Tag`](crate::metric::Tag) that identifies this request.
     fn metric_tag() -> Tag;
 
     /// Optional query parameters for this request.
