@@ -51,8 +51,6 @@ where
     where
         Request: RestRequest,
     {
-        let x: reqwest::header::HeaderMap;
-
         // Use provided Request to construct a signed reqwest::Request
         let request = self.build(request)?;
 
