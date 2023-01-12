@@ -15,7 +15,8 @@ pub trait Signer {
     where
         Self: 'a;
 
-    /// Generates a [`Self::Config`] for this [`RestRequest`] and [`RequestBuilder`].
+    /// Generates a [`Self::Config`] for this [`RestRequest`] and
+    /// [`RequestBuilder`](reqwest::RequestBuilder).
     ///
     /// # Examples
     ///
@@ -53,8 +54,8 @@ pub trait Signer {
     /// ```
     fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes;
 
-    /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`], [`RequestBuilder`],
-    /// and generated cryptographic signature `String`.
+    /// Build a signed [`reqwest::Request`] from the provided [`Self::Config`],
+    /// [`RequestBuilder`](reqwest::RequestBuilder), and generated cryptographic signature `String`.
     ///
     /// # Examples
     ///

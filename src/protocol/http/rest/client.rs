@@ -10,7 +10,9 @@ use tracing::warn;
 
 /// Configurable REST client capable of executing signed [`RestRequest`]s. Use this when
 /// integrating APIs that require Http in order to interact with resources. Each API will require
-/// a specific combination of [`Signer`], [`Mac`], signature [`Encoder`], and [`Parser`].
+/// a specific combination of [`Signer`](super::super::private::Signer), [`Mac`](hmac::Mac),
+/// signature [`Encoder`](super::super::private::encoder::Encoder), and
+/// [`HttpParser`](super::super::HttpParser).
 #[derive(Debug)]
 pub struct RestClient<'a, Strategy, Parser> {
     /// HTTP [`reqwest::Client`] for executing signed [`reqwest::Request`]s.
@@ -25,9 +27,10 @@ pub struct RestClient<'a, Strategy, Parser> {
     /// [`RestRequest`] build strategy for the API being interacted with that implements
     /// [`BuildStrategy`].
     ///
-    /// An authenticated [`RestClient`] will utilise API specific [`signer`] logic, a hashable
-    /// [`Mac`], and a signature [`Encoder`]. Where as a non authorised [`RestRequest`] may just
-    /// add mandatory [`reqwest::Header`]s.
+    /// An authenticated [`RestClient`] will utilise API specific
+    /// [`Signer`](super::super::private::Signer) logic, a hashable [`Mac`](hmac::Mac), and a
+    /// signature [`Encoder`](super::super::private::encoder::Encoder). Where as a non authorised
+    /// [`RestRequest`] may add any mandatory `reqwest` headers that are required.
     pub strategy: Strategy,
 
     /// [`HttpParser`] that deserialises [`RestRequest::Response`]s, and upon failure parses
@@ -48,6 +51,8 @@ where
     where
         Request: RestRequest,
     {
+        let x: reqwest::header::HeaderMap;
+
         // Use provided Request to construct a signed reqwest::Request
         let request = self.build(request)?;
 
