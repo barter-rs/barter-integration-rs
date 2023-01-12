@@ -34,9 +34,10 @@ struct StatefulTransformer {
 }
 
 impl Transformer for StatefulTransformer {
+    type Error = SocketError;
     type Input = BinanceMessage;
     type Output = VolumeSum;
-    type OutputIter = Vec<Result<VolumeSum, SocketError>>;
+    type OutputIter = Vec<Result<Self::Output, Self::Error>>;
 
     fn transform(&mut self, input: Self::Input) -> Self::OutputIter {
         // Add new input Trade quantity to sum

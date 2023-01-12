@@ -1,8 +1,16 @@
+//! # Barter-Integration
+//! A high-performan
+//!
+//!
+//! Contains an [`ExchangeStream`] capable of acting as a [`Stream`] for a given remote server, and a [`ExchangeSink`]
+//! capable of acting [`Sink`] for a given remote server.
+
 #![warn(
     missing_debug_implementations,
     missing_copy_implementations,
     rust_2018_idioms
 )]
+
 use crate::{error::SocketError, protocol::StreamParser};
 use futures::Stream;
 use pin_project::pin_project;
@@ -14,10 +22,6 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-
-///! # Barter-Integration
-///! Contains an [`ExchangeStream`] capable of acting as a [`Stream`] for a given remote server, and a [`ExchangeSink`]
-///! capable of acting [`Sink`] for a given remote server.
 
 /// Foundational data structures that define the building blocks used by the rest of the `Barter`
 /// ecosystem.
