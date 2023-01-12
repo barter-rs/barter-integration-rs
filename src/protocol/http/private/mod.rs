@@ -8,6 +8,7 @@ use hmac::Mac;
 pub mod encoder;
 
 /// API specific signing logic used by a [`RequestSigner`].
+#[allow(clippy::needless_lifetimes)]
 pub trait Signer {
     /// Configuration required to sign the [`RestRequest`]s for this API server.
     type Config<'a>
