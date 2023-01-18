@@ -16,7 +16,7 @@ where
     data.parse::<T>().map_err(serde::de::Error::custom)
 }
 
-/// Deserialize a `u64` as `DateTime<Utc>`.
+/// Deserialize a `u64` milliseconds value as `DateTime<Utc>`.
 pub fn de_u64_epoch_ms_as_datetime_utc<'de, D>(
     deserializer: D,
 ) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
@@ -28,7 +28,7 @@ where
     })
 }
 
-/// Deserialize a &str "u64" as `DateTime<Utc>`.
+/// Deserialize a &str "u64" milliseconds value as `DateTime<Utc>`.
 pub fn de_str_u64_epoch_ms_as_datetime_utc<'de, D>(
     deserializer: D,
 ) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
@@ -40,7 +40,7 @@ where
     })
 }
 
-/// Deserialize a &str "f64" as `DateTime<Utc>`.
+/// Deserialize a &str "f64" milliseconds value as `DateTime<Utc>`.
 pub fn de_str_f64_epoch_ms_as_datetime_utc<'de, D>(
     deserializer: D,
 ) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
@@ -51,6 +51,19 @@ where
         datetime_utc_from_epoch_duration(std::time::Duration::from_millis(epoch_ms as u64))
     })
 }
+
+/// Deserialize a &str "f64" seconds value as `DateTime<Utc>`.
+pub fn de_str_f64_epoch_s_as_datetime_utc<'de, D>(
+    deserializer: D,
+) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    de_str(deserializer).map(|epoch_s: f64| {
+        datetime_utc_from_epoch_duration(std::time::Duration::from_secs_f64(epoch_s))
+    })
+}
+
 
 /// Assists deserialisation of sequences by attempting to extract & parse the next element in the
 /// provided sequence.
