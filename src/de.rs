@@ -64,7 +64,6 @@ where
     })
 }
 
-
 /// Assists deserialisation of sequences by attempting to extract & parse the next element in the
 /// provided sequence.
 ///
