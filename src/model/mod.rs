@@ -216,15 +216,15 @@ mod tests {
             },
             TestCase {
                 // TC1: Valid Ftx btc_usd FuturePerpetual Market
-                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"##,
+                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_kind": "perpetual" }"##,
                 expected: Ok(Market {
                     exchange: Exchange::from("ftx_old"),
-                    instrument: Instrument::from(("btc", "usd", InstrumentKind::FuturePerpetual)),
+                    instrument: Instrument::from(("btc", "usd", InstrumentKind::Perpetual)),
                 }),
             },
             TestCase {
                 // TC3: Invalid Market w/ numeric exchange
-                input: r##"{ "exchange": 100, "base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"##,
+                input: r##"{ "exchange": 100, "base": "btc", "quote": "usd", "instrument_kind": "perpetual" }"##,
                 expected: Err(serde_json::Error::custom("")),
             },
         ];

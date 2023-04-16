@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 pub enum InstrumentKind {
     Spot,
     Future(FutureContract),
-    FuturePerpetual,
+    Perpetual,
     Option(OptionContract),
 }
 
@@ -29,7 +29,7 @@ impl Display for InstrumentKind {
                 InstrumentKind::Spot => "spot".to_string(),
                 InstrumentKind::Future(future) =>
                     format!("future_{}-UTC", future.expiry.date_naive()),
-                InstrumentKind::FuturePerpetual => "future_perpetual".to_string(),
+                InstrumentKind::Perpetual => "perpetual".to_string(),
                 InstrumentKind::Option(option) => format!(
                     "option_{}_{}_{}-UTC_{}",
                     option.kind,
