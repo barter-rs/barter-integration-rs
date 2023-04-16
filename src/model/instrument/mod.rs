@@ -90,12 +90,8 @@ mod tests {
             },
             TestCase {
                 // TC2: Valid FuturePerpetual
-                input: r#"{"base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"#,
-                expected: Ok(Instrument::from((
-                    "btc",
-                    "usd",
-                    InstrumentKind::FuturePerpetual,
-                ))),
+                input: r#"{"base": "btc", "quote": "usd", "instrument_kind": "perpetual" }"#,
+                expected: Ok(Instrument::from(("btc", "usd", InstrumentKind::Perpetual))),
             },
             TestCase {
                 // TC3: Valid Option Call American
