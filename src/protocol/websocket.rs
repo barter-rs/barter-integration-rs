@@ -1,8 +1,5 @@
 use crate::{error::SocketError, protocol::StreamParser};
-use serde::{
-    de::DeserializeOwned,
-    {Deserialize, Serialize},
-};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{
