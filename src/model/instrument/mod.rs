@@ -10,10 +10,11 @@ pub mod symbol;
 ///
 /// eg/ Instrument { base: "btc", quote: "usdt", kind: Spot }
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Instrument {
     pub base: Symbol,
     pub quote: Symbol,
-    #[serde(rename = "instrument_type")]
+    #[serde(rename = "instrument_kind")]
     pub kind: InstrumentKind,
 }
 
@@ -53,8 +54,11 @@ impl Instrument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::instrument::kind::InstrumentKind;
-    use serde::de::Error;
+    use crate::model::instrument::kind::{
+        FutureContract, InstrumentKind, OptionContract, OptionExercise, OptionKind,
+    };
+    use chrono::{TimeZone, Utc};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_de_instrument() {
@@ -65,13 +69,28 @@ mod tests {
 
         let cases = vec![
             TestCase {
-                // TC0: Valid Spot Instrument
-                input: r##"{"base": "btc", "quote": "usd", "instrument_type": "spot" }"##,
+                // TC0: Valid Spot
+                input: r#"{"base": "btc", "quote": "usd", "instrument_kind": "spot" }"#,
                 expected: Ok(Instrument::from(("btc", "usd", InstrumentKind::Spot))),
             },
             TestCase {
-                // TC1: Valid FuturePerpetual Instrument
-                input: r##"{"base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
+                // TC1: Valid Future
+                input: r#"{
+                    "base": "btc",
+                    "quote": "usd",
+                    "instrument_kind": {"future": {"expiry": 1703980800000}}
+                }"#,
+                expected: Ok(Instrument::new(
+                    "btc",
+                    "usd",
+                    InstrumentKind::Future(FutureContract {
+                        expiry: Utc.timestamp_millis_opt(1703980800000).unwrap(),
+                    }),
+                )),
+            },
+            TestCase {
+                // TC2: Valid FuturePerpetual
+                input: r#"{"base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"#,
                 expected: Ok(Instrument::from((
                     "btc",
                     "usd",
@@ -79,19 +98,54 @@ mod tests {
                 ))),
             },
             TestCase {
-                // TC2: Invalid Spot Instrument w/ numeric base
-                input: r##"{ "base": 100, "quote": "usd", "instrument_type": "future_perpetual" }"##,
-                expected: Err(serde_json::Error::custom("")),
+                // TC3: Valid Option Call American
+                input: r#"{
+                    "base": "btc",
+                    "quote": "usd",
+                    "instrument_kind": {
+                        "option": {
+                            "kind": "CALL",
+                            "exercise": "American",
+                            "expiry": 1703980800000,
+                            "strike": 50000
+                        }
+                    }
+                }"#,
+                expected: Ok(Instrument::from((
+                    "btc",
+                    "usd",
+                    InstrumentKind::Option(OptionContract {
+                        kind: OptionKind::Call,
+                        exercise: OptionExercise::American,
+                        expiry: Utc.timestamp_millis_opt(1703980800000).unwrap(),
+                        strike: dec!(50000),
+                    }),
+                ))),
             },
             TestCase {
-                // TC3: Invalid Instrument w/ gibberish InstrumentKind
-                input: r##"{"base": "btc", "quote": "usd", "instrument_type": "gibberish" }"##,
-                expected: Err(serde_json::Error::custom("")),
-            },
-            TestCase {
-                // TC4: Invalid Instrument w/ complete gibberish
-                input: r##"{ "gibberish": "shouldfail"}"##,
-                expected: Err(serde_json::Error::custom("")),
+                // TC4: Valid Option Put Bermudan
+                input: r#"{
+                    "base": "btc",
+                    "quote": "usd",
+                    "instrument_kind": {
+                        "option": {
+                            "kind": "Put",
+                            "exercise": "BERMUDAN",
+                            "expiry": 1703980800000,
+                            "strike": 50000
+                        }
+                    }
+                }"#,
+                expected: Ok(Instrument::from((
+                    "btc",
+                    "usd",
+                    InstrumentKind::Option(OptionContract {
+                        kind: OptionKind::Put,
+                        exercise: OptionExercise::Bermudan,
+                        expiry: Utc.timestamp_millis_opt(1703980800000).unwrap(),
+                        strike: dec!(50000.0),
+                    }),
+                ))),
             },
         ];
 

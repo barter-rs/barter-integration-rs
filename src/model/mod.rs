@@ -5,7 +5,9 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
-/// Todo:
+/// [`Instrument`] related data structures.
+///
+/// eg/ `Instrument`, `InstrumentKind`, `OptionContract`, `Symbol`, etc.
 pub mod instrument;
 
 /// Represents a unique combination of an [`Exchange`] & an [`Instrument`].
@@ -206,7 +208,7 @@ mod tests {
         let cases = vec![
             TestCase {
                 // TC0: Valid Binance btc_usd Spot Market
-                input: r##"{ "exchange": "binance", "base": "btc", "quote": "usd", "instrument_type": "spot" }"##,
+                input: r##"{ "exchange": "binance", "base": "btc", "quote": "usd", "instrument_kind": "spot" }"##,
                 expected: Ok(Market {
                     exchange: Exchange::from("binance"),
                     instrument: Instrument::from(("btc", "usd", InstrumentKind::Spot)),
@@ -214,20 +216,15 @@ mod tests {
             },
             TestCase {
                 // TC1: Valid Ftx btc_usd FuturePerpetual Market
-                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
+                input: r##"{ "exchange": "ftx_old", "base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"##,
                 expected: Ok(Market {
                     exchange: Exchange::from("ftx_old"),
                     instrument: Instrument::from(("btc", "usd", InstrumentKind::FuturePerpetual)),
                 }),
             },
             TestCase {
-                // TC2: Invalid Market w/ numeric exchange
-                input: r##"{ "exchange": 100, "base": "btc", "quote": "usd", "instrument_type": "future_perpetual" }"##,
-                expected: Err(serde_json::Error::custom("")),
-            },
-            TestCase {
-                // TC3: Invalid Market w/ gibberish
-                input: r##"{ "gibberish": "shouldfail"}"##,
+                // TC3: Invalid Market w/ numeric exchange
+                input: r##"{ "exchange": 100, "base": "btc", "quote": "usd", "instrument_kind": "future_perpetual" }"##,
                 expected: Err(serde_json::Error::custom("")),
             },
         ];

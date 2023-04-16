@@ -44,6 +44,7 @@ impl Display for InstrumentKind {
 /// Todo:
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 pub struct FutureContract {
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub expiry: DateTime<Utc>,
 }
 
@@ -52,6 +53,7 @@ pub struct FutureContract {
 pub struct OptionContract {
     pub kind: OptionKind,
     pub exercise: OptionExercise,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub expiry: DateTime<Utc>,
     pub strike: Decimal,
 }
