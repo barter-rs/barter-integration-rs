@@ -1,6 +1,6 @@
 [package]
 name = "barter-integration"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["JustAStream"]
 edition = "2021"
 license = "MIT"
@@ -11,7 +11,8 @@ description = "Low-level framework for composing flexible web integrations, espe
 keywords = ["trading", "backtesting", "crypto", "stocks", "investment"]
 categories = ["accessibility", "simulation"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dev-dependencies]
+rust_decimal_macros = "1.29.1"
 
 [dependencies]
 # Logging
@@ -20,7 +21,7 @@ tracing = "0.1.29"
 # SerDe
 serde = { version = "1.0.143", features = ["derive"] }
 serde_json = "1.0.83"
-serde_qs = "0.11.0"
+serde_qs = "0.12.0"
 
 # Error
 thiserror = "1.0.32"
@@ -42,5 +43,6 @@ sha2 = "0.10.6"
 hex = "0.4.3"
 
 # Misc
-chrono = "0.4.21"
+chrono = { version = "0.4.21", features = ["serde"] }
 bytes = "1.2.1"
+rust_decimal = "1.29.1"

@@ -1,7 +1,7 @@
 use barter_integration::{
     error::SocketError,
     metric::Tag,
-    model::Symbol,
+    model::instrument::symbol::Symbol,
     protocol::http::{
         private::{encoder::HexEncoder, RequestSigner, Signer},
         rest::{client::RestClient, RestRequest},
