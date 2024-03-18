@@ -4,16 +4,16 @@ use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use tracing::error;
 
-/// Defines an abstract [`RestRequest`](rest::RestRequest) that can be executed by a fully
+/// Defines an abstract [`RestRequest`] that can be executed by a fully
 /// configurable [`RestClient`](rest::client::RestClient).
 pub mod rest;
 
 /// Defines a configurable [`RequestSigner`](private::RequestSigner) that signs Http
-/// [`RestRequest`](rest::RestRequest) using API specific logic.
+/// [`RestRequest`] using API specific logic.
 pub mod private;
 
 /// Defines a default [`BuildStrategy`] that builds a non-authenticated Http
-/// [`RestRequest`](rest::RestRequest) with no headers.
+/// [`RestRequest`] with no headers.
 pub mod public;
 
 /// [`RestRequest`] build strategy for the API being interacted with.
@@ -39,7 +39,7 @@ pub trait BuildStrategy {
 }
 
 /// Utilised by a [`RestClient`](rest::client::RestClient) to deserialise
-/// [`RestRequest::Response`](rest::RestRequest::Response), and upon failure parses API errors
+/// [`RestRequest::Response`], and upon failure parses API errors
 /// returned from the server.
 pub trait HttpParser {
     type ApiError: DeserializeOwned;

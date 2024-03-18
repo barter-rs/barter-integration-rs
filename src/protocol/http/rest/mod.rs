@@ -1,4 +1,3 @@
-use crate::metric::Tag;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
@@ -25,9 +24,6 @@ pub trait RestRequest {
 
     /// Http [`reqwest::Method`] of this request.
     fn method() -> reqwest::Method;
-
-    /// [`Metric`](crate::metric::Metric) [`Tag`](crate::metric::Tag) that identifies this request.
-    fn metric_tag() -> Tag;
 
     /// Optional query parameters for this request.
     fn query_params(&self) -> Option<&Self::QueryParams> {
