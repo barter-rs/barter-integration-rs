@@ -1,6 +1,5 @@
 use barter_integration::{
     error::SocketError,
-    metric::Tag,
     model::instrument::symbol::Symbol,
     protocol::http::{
         private::{encoder::HexEncoder, RequestSigner, Signer},
@@ -14,7 +13,6 @@ use hmac::{digest::KeyInit, Hmac};
 use reqwest::{RequestBuilder, StatusCode};
 use serde::Deserialize;
 use thiserror::Error;
-use tokio::sync::mpsc;
 
 struct FtxSigner {
     api_key: String,
@@ -111,10 +109,6 @@ impl RestRequest for FetchBalancesRequest {
     fn method() -> reqwest::Method {
         reqwest::Method::GET
     }
-
-    fn metric_tag() -> Tag {
-        Tag::new("method", "fetch_balances")
-    }
 }
 
 #[derive(Deserialize)]
@@ -136,9 +130,6 @@ struct FtxBalance {
 /// box to execute trades on many exchanges.
 #[tokio::main]
 async fn main() {
-    // Construct Metric channel to send Http execution metrics over
-    let (http_metric_tx, _http_metric_rx) = mpsc::unbounded_channel();
-
     // HMAC-SHA256 encoded account API secret used for signing private http requests
     let mac: Hmac<sha2::Sha256> = Hmac::new_from_slice("api_secret".as_bytes()).unwrap();
 
@@ -152,7 +143,7 @@ async fn main() {
     );
 
     // Build RestClient with Ftx configuration
-    let rest_client = RestClient::new("https://ftx.com", http_metric_tx, request_signer, FtxParser);
+    let rest_client = RestClient::new("https://ftx.com", request_signer, FtxParser);
 
     // Fetch Result<FetchBalancesResponse, ExecutionError>
     let _response = rest_client.execute(FetchBalancesRequest).await;
