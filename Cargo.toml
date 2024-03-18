@@ -41,6 +41,7 @@ url = "2.3.1"
 hmac = "0.12.1"
 sha2 = "0.10.6"
 hex = "0.4.3"
+base64 = "0.22.0"
 
 # Misc
 chrono = { version = "0.4.21", features = ["serde"] }
