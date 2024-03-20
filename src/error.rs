@@ -26,6 +26,9 @@ pub enum SocketError {
     #[error("SerDe Query String serialisation error: {0}")]
     QueryParams(#[from] serde_qs::Error),
 
+    #[error("SerDe url encoding serialisation error: {0}")]
+    UrlEncoded(#[from] serde_urlencoded::ser::Error),
+
     #[error("error parsing Url: {0}")]
     UrlParse(#[from] url::ParseError),
 
