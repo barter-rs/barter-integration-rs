@@ -12,31 +12,31 @@ keywords = ["trading", "backtesting", "crypto", "stocks", "investment"]
 categories = ["accessibility", "simulation"]
 
 [dev-dependencies]
-rust_decimal_macros = "1.29.1"
+rust_decimal_macros = "1.34.2"
 
 [dependencies]
 # Logging
-tracing = "0.1.29"
+tracing = "0.1.40"
 
 # SerDe
-serde = { version = "1.0.143", features = ["derive"] }
-serde_json = "1.0.83"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
 serde_qs = "0.12.0"
 serde_urlencoded = "0.7.1"
 
 # Error
-thiserror = "1.0.32"
+thiserror = "1.0.58"
 
 # Async
-tokio = { version = "1.20.1", features = ["net", "sync", "macros", "rt-multi-thread"] }
-futures = "0.3.21"
-async-trait = "0.1.57"
-pin-project = "1.0.11"
+tokio = { version = "1.36.0", features = ["net", "sync", "macros", "rt-multi-thread"] }
+futures = "0.3.3"
+async-trait = "0.1.78"
+pin-project = "1.1.5"
 
 # Protocol
-tokio-tungstenite = { version = "0.18.0", features = ["rustls-tls-webpki-roots"] }
-reqwest = { version = "0.11.12", features = ["json"] }
-url = "2.3.1"
+tokio-tungstenite = { version = "0.21.0", features = ["rustls-tls-webpki-roots"] }
+reqwest = { version = "0.11.27", features = ["json"] }
+url = "2.5.0"
 
 # Cryptographic Signatures
 hmac = "0.12.1"
@@ -45,6 +45,6 @@ hex = "0.4.3"
 base64 = "0.22.0"
 
 # Misc
-chrono = { version = "0.4.21", features = ["serde"] }
-bytes = "1.2.1"
-rust_decimal = "1.29.1"
+chrono = { version = "0.4.35", features = ["serde"] }
+bytes = "1.5.0"
+rust_decimal = "1.34.3"
