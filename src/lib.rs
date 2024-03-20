@@ -147,7 +147,7 @@ where
             stream,
             transformer,
             buffer: VecDeque::with_capacity(6),
-            protocol_marker: PhantomData::default(),
+            protocol_marker: PhantomData,
         }
     }
 }

@@ -5,14 +5,12 @@ use crate::{
 };
 use bytes::Bytes;
 use chrono::Utc;
-use tokio::sync::mpsc;
-use tracing::warn;
 
 /// Configurable REST client capable of executing signed [`RestRequest`]s. Use this when
 /// integrating APIs that require Http in order to interact with resources. Each API will require
 /// a specific combination of [`Signer`](super::super::private::Signer), [`Mac`](hmac::Mac),
 /// signature [`Encoder`](super::super::private::encoder::Encoder), and
-/// [`HttpParser`](super::super::HttpParser).
+/// [`HttpParser`].
 #[derive(Debug)]
 pub struct RestClient<'a, Strategy, Parser> {
     /// HTTP [`reqwest::Client`] for executing signed [`reqwest::Request`]s.
@@ -20,9 +18,6 @@ pub struct RestClient<'a, Strategy, Parser> {
 
     /// Base Url of the API being interacted with.
     pub base_url: &'a str,
-
-    /// [`Metric`] transmitter for sending observed execution measurements to an external receiver.
-    pub metric_tx: mpsc::UnboundedSender<Metric>,
 
     /// [`RestRequest`] build strategy for the API being interacted with that implements
     /// [`BuildStrategy`].
@@ -47,7 +42,7 @@ where
     pub async fn execute<Request>(
         &self,
         request: Request,
-    ) -> Result<Request::Response, Parser::OutputError>
+    ) -> Result<(Request::Response, Metric), Parser::OutputError>
     where
         Request: RestRequest,
     {
@@ -55,10 +50,12 @@ where
         let request = self.build(request)?;
 
         // Measure request execution
-        let (status, payload) = self.measured_execution::<Request>(request).await?;
+        let (status, payload, latency) = self.measured_execution::<Request>(request).await?;
 
         // Attempt to parse API Success or Error response
-        self.parser.parse::<Request::Response>(status, &payload)
+        self.parser
+            .parse::<Request::Response>(status, &payload)
+            .map(|response| (response, latency))
     }
 
     /// Use the provided [`RestRequest`] to construct a signed Http [`reqwest::Request`].
@@ -91,12 +88,11 @@ where
 
     /// Execute the built [`reqwest::Request`] using the [`reqwest::Client`].
     ///
-    /// Measures the Http request round trip duration and sends the associated [`Metric`]
-    /// via the [`Metric`] transmitter.
+    /// Measures and returns the Http request round trip duration.
     pub async fn measured_execution<Request>(
         &self,
         request: reqwest::Request,
-    ) -> Result<(reqwest::StatusCode, Bytes), SocketError>
+    ) -> Result<(reqwest::StatusCode, Bytes, Metric), SocketError>
     where
         Request: RestRequest,
     {
@@ -105,43 +101,33 @@ where
         let response = self.http_client.execute(request).await?;
         let duration = start.elapsed().as_millis() as u64;
 
-        // Construct HTTP request duration Metric & send
-        let http_duration = Metric {
+        // Construct HTTP request duration Metric
+        let latency = Metric {
             name: "http_request_duration",
             time: Utc::now().timestamp_millis() as u64,
             tags: vec![
-                Request::metric_tag(),
                 Tag::new("http_method", Request::method().as_str()),
                 Tag::new("status_code", response.status().as_str()),
                 Tag::new("base_url", self.base_url),
+                Tag::new("path", Request::path()),
             ],
             fields: vec![Field::new("duration", duration)],
         };
-
-        if self.metric_tx.send(http_duration).is_err() {
-            warn!("failed to send Metric due to dropped channel receiver");
-        }
 
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();
         let payload = response.bytes().await?;
 
-        Ok((status_code, payload))
+        Ok((status_code, payload, latency))
     }
 }
 
 impl<'a, Strategy, Parser> RestClient<'a, Strategy, Parser> {
     /// Construct a new [`Self`] using the provided configuration.
-    pub fn new(
-        base_url: &'a str,
-        metric_tx: mpsc::UnboundedSender<Metric>,
-        strategy: Strategy,
-        parser: Parser,
-    ) -> Self {
+    pub fn new(base_url: &'a str, strategy: Strategy, parser: Parser) -> Self {
         Self {
             http_client: reqwest::Client::new(),
             base_url,
-            metric_tx,
             strategy,
             parser,
         }
