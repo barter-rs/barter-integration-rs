@@ -64,7 +64,7 @@ where
         Request: RestRequest,
     {
         // Construct url
-        let url = self.base_url.to_string() + Request::path();
+        let url = format!("{}{}", self.base_url, request.path());
 
         // Construct RequestBuilder with method & url
         let mut builder = self
@@ -96,23 +96,26 @@ where
     where
         Request: RestRequest,
     {
+        // Construct Http request duration Metric
+        let mut latency = Metric {
+            name: "http_request_duration",
+            time: Utc::now().timestamp_millis() as u64,
+            tags: vec![
+                Tag::new("http_method", Request::method().as_str()),
+                Tag::new("base_url", self.base_url),
+                Tag::new("path", request.url().path()),
+            ],
+            fields: Vec::with_capacity(1),
+        };
+
         // Measure the HTTP request round trip duration
         let start = std::time::Instant::now();
         let response = self.http_client.execute(request).await?;
         let duration = start.elapsed().as_millis() as u64;
 
-        // Construct HTTP request duration Metric
-        let latency = Metric {
-            name: "http_request_duration",
-            time: Utc::now().timestamp_millis() as u64,
-            tags: vec![
-                Tag::new("http_method", Request::method().as_str()),
-                Tag::new("status_code", response.status().as_str()),
-                Tag::new("base_url", self.base_url),
-                Tag::new("path", Request::path()),
-            ],
-            fields: vec![Field::new("duration", duration)],
-        };
+        // Update Metric with response status and request duration
+        latency.tags.push(Tag::new("status_code", response.status().as_str()));
+        latency.fields.push(Field::new("duration", duration));
 
         // Extract Status Code & reqwest::Response Bytes
         let status_code = response.status();

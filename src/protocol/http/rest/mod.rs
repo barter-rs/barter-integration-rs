@@ -20,7 +20,7 @@ pub trait RestRequest {
     type Body: Serialize;
 
     /// Additional [`Url`](url::Url) path to the resource.
-    fn path() -> &'static str;
+    fn path(&self) -> std::borrow::Cow<'static, str>;
 
     /// Http [`reqwest::Method`] of this request.
     fn method() -> reqwest::Method;
