@@ -114,7 +114,9 @@ where
         let duration = start.elapsed().as_millis() as u64;
 
         // Update Metric with response status and request duration
-        latency.tags.push(Tag::new("status_code", response.status().as_str()));
+        latency
+            .tags
+            .push(Tag::new("status_code", response.status().as_str()));
         latency.fields.push(Field::new("duration", duration));
 
         // Extract Status Code & reqwest::Response Bytes
