@@ -21,7 +21,7 @@ tracing = "0.1.40"
 # SerDe
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-serde_qs = "0.12.0"
+serde_qs = "0.13.0"
 serde_urlencoded = "0.7.1"
 
 # Error
@@ -35,7 +35,7 @@ pin-project = "1.1.5"
 
 # Protocol
 tokio-tungstenite = { version = "0.21.0", features = ["rustls-tls-webpki-roots"] }
-reqwest = { version = "0.11.27", features = ["json"] }
+reqwest = { version = "0.12.3", features = ["json"] }
 url = "2.5.0"
 
 # Cryptographic Signatures
