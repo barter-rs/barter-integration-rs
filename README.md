@@ -66,6 +66,8 @@ At a high level, an `ExchangeStream` is made up of a few major components:
 
 #### Fetch Ftx Account Balances Using Signed GET request:
 ```rust,no_run
+use std::borrow::Cow;
+
 use barter_integration::{
     error::SocketError,
     metric::Tag,
@@ -78,7 +80,7 @@ use barter_integration::{
 };
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
-use hmac::{digest::KeyInit, Hmac};
+use hmac::{Hmac, Mac};
 use reqwest::{RequestBuilder, StatusCode};
 use serde::Deserialize;
 use thiserror::Error;
@@ -93,7 +95,7 @@ struct FtxSignConfig<'a> {
     api_key: &'a str,
     time: DateTime<Utc>,
     method: reqwest::Method,
-    path: &'static str,
+    path: Cow<'static, str>,
 }
 
 impl Signer for FtxSigner {
@@ -101,7 +103,7 @@ impl Signer for FtxSigner {
 
     fn config<'a, Request>(
         &'a self,
-        _: Request,
+        request: Request,
         _: &RequestBuilder,
     ) -> Result<Self::Config<'a>, SocketError>
     where
@@ -111,14 +113,17 @@ impl Signer for FtxSigner {
             api_key: self.api_key.as_str(),
             time: Utc::now(),
             method: Request::method(),
-            path: Request::path(),
+            path: request.path(),
         })
     }
 
-    fn bytes_to_sign<'a>(config: &Self::Config<'a>) -> Bytes {
-        Bytes::copy_from_slice(
-            format!("{}{}{}", config.time, config.method, config.path).as_bytes(),
-        )
+    fn add_bytes_to_sign<M>(mac: &mut M, config: &Self::Config<'a>) -> Bytes
+    where
+        M: Mac
+    {
+        mac.update(config.time.to_string().as_bytes());
+        mac.update(config.method.as_str().as_bytes());
+        mac.update(config.path.as_bytes());
     }
 
     fn build_signed_request<'a>(
@@ -172,8 +177,8 @@ impl RestRequest for FetchBalancesRequest {
     type QueryParams = (); // FetchBalances does not require any QueryParams
     type Body = (); // FetchBalances does not require any Body
 
-    fn path() -> &'static str {
-        "/api/wallet/balances"
+    fn path(&self) -> Cow<'static, str> {
+        Cow::Borrowed("/api/wallet/balances")
     }
 
     fn method() -> reqwest::Method {
