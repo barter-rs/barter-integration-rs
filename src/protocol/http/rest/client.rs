@@ -5,6 +5,7 @@ use crate::{
 };
 use bytes::Bytes;
 use chrono::Utc;
+use std::borrow::Cow;
 
 /// Configurable REST client capable of executing signed [`RestRequest`]s. Use this when
 /// integrating APIs that require Http in order to interact with resources. Each API will require
@@ -17,7 +18,7 @@ pub struct RestClient<'a, Strategy, Parser> {
     pub http_client: reqwest::Client,
 
     /// Base Url of the API being interacted with.
-    pub base_url: &'a str,
+    pub base_url: Cow<'a, str>,
 
     /// [`RestRequest`] build strategy for the API being interacted with that implements
     /// [`BuildStrategy`].
@@ -102,7 +103,7 @@ where
             time: Utc::now().timestamp_millis() as u64,
             tags: vec![
                 Tag::new("http_method", Request::method().as_str()),
-                Tag::new("base_url", self.base_url),
+                Tag::new("base_url", self.base_url.as_ref()),
                 Tag::new("path", request.url().path()),
             ],
             fields: Vec::with_capacity(1),
@@ -129,10 +130,10 @@ where
 
 impl<'a, Strategy, Parser> RestClient<'a, Strategy, Parser> {
     /// Construct a new [`Self`] using the provided configuration.
-    pub fn new(base_url: &'a str, strategy: Strategy, parser: Parser) -> Self {
+    pub fn new<Url: Into<Cow<'a, str>>>(base_url: Url, strategy: Strategy, parser: Parser) -> Self {
         Self {
             http_client: reqwest::Client::new(),
-            base_url,
+            base_url: base_url.into(),
             strategy,
             parser,
         }
