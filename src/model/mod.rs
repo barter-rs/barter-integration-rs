@@ -12,23 +12,23 @@ pub mod instrument;
 
 /// Represents a unique combination of an [`Exchange`] & an [`Instrument`].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct Market {
+pub struct Market<InstrumentId = Instrument> {
     pub exchange: Exchange,
     #[serde(flatten)]
-    pub instrument: Instrument,
+    pub instrument: InstrumentId,
 }
 
-impl<E, I> From<(E, I)> for Market
+impl<E, I, InstrumentId> From<(E, I)> for Market<InstrumentId>
 where
     E: Into<Exchange>,
-    I: Into<Instrument>,
+    I: Into<InstrumentId>,
 {
     fn from((exchange, instrument): (E, I)) -> Self {
         Self::new(exchange, instrument)
     }
 }
 
-impl<E, S> From<(E, S, S, InstrumentKind)> for Market
+impl<E, S> From<(E, S, S, InstrumentKind)> for Market<Instrument>
 where
     E: Into<Exchange>,
     S: Into<Symbol>,
@@ -38,12 +38,12 @@ where
     }
 }
 
-impl Market {
+impl<InstrumentId> Market<InstrumentId> {
     /// Constructs a new [`Market`] using the provided [`Exchange`] & [`Instrument`].
     pub fn new<E, I>(exchange: E, instrument: I) -> Self
     where
         E: Into<Exchange>,
-        I: Into<Instrument>,
+        I: Into<InstrumentId>,
     {
         Self {
             exchange: exchange.into(),
@@ -55,20 +55,10 @@ impl Market {
 /// Barter new type representing a unique `String` identifier for a [`Market`], where a [`Market`]
 /// represents an [`Instrument`] being traded on an [`Exchange`].
 ///
-/// eg/ binance_btc_usdt_spot
+/// eg/ binance_(btc_spot, future_perpetual)
 /// eg/ ftx_btc_usdt_future_perpetual
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct MarketId(pub String);
-
-impl<'a, M> From<M> for MarketId
-where
-    M: Into<&'a Market>,
-{
-    fn from(market: M) -> Self {
-        let market = market.into();
-        Self::new(&market.exchange, &market.instrument)
-    }
-}
 
 impl Debug for MarketId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -85,6 +75,12 @@ impl Display for MarketId {
 impl<'de> Deserialize<'de> for MarketId {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         String::deserialize(deserializer).map(MarketId)
+    }
+}
+
+impl<InstrumentId: Display> From<&Market<InstrumentId>> for MarketId {
+    fn from(value: &Market<InstrumentId>) -> Self {
+        Self(format!("{}_{}", value.exchange, value.instrument).to_lowercase())
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::model::instrument::{kind::InstrumentKind, symbol::Symbol};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 pub mod kind;
 pub mod symbol;
@@ -20,7 +20,7 @@ pub struct Instrument {
 
 impl Display for Instrument {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}_{}, {})", self.base, self.quote, self.kind)
+        write!(f, "{}_{}_{}", self.base, self.quote, self.kind)
     }
 }
 
